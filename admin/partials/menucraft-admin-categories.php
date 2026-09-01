@@ -124,14 +124,6 @@ defined( 'ABSPATH' ) || exit;
 					</div>
 
 					<div class="menucraft-field">
-						<label for="menucraft-cat-parent"><?php esc_html_e( 'Parent Category', 'menucraft' ); ?></label>
-						<select id="menucraft-cat-parent" name="parent_id" data-menucraft-parent-select>
-							<option value=""><?php esc_html_e( '— None —', 'menucraft' ); ?></option>
-							<?php // Options populated by JS from the fetched list. ?>
-						</select>
-					</div>
-
-					<div class="menucraft-field">
 						<label for="menucraft-cat-sort"><?php esc_html_e( 'Sort Order', 'menucraft' ); ?></label>
 						<input type="number" id="menucraft-cat-sort" name="sort_order" value="0" step="1" min="0">
 					</div>

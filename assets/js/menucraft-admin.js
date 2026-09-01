@@ -433,7 +433,6 @@
 		setFieldValue( form, 'name', entity.name || '' );
 		setFieldValue( form, 'description', entity.description || '' );
 		setFieldValue( form, 'color', entity.color || '#3858e9' );
-		setFieldValue( form, 'parent_id', entity.parent_id ? String( entity.parent_id ) : '' );
 		setFieldValue( form, 'sort_order', String( entity.sort_order || 0 ) );
 
 		var activeBox = form.querySelector( '[name="is_active"]' );
@@ -505,7 +504,6 @@
 			.then( function ( rows ) {
 				state.cache = Array.isArray( rows ) ? rows : [];
 				renderTable( state );
-				refreshParentDropdown( state );
 			} )
 			.catch( function ( err ) {
 				showToast( err.message || i18n.listError || 'Could not load list.', 'error' );
@@ -681,31 +679,6 @@
 		return text.substring( 0, max ) + '…';
 	}
 
-	function refreshParentDropdown( state ) {
-		if ( ! state.panelId ) {
-			return;
-		}
-		var panel = document.getElementById( state.panelId );
-		if ( ! panel ) {
-			return;
-		}
-		var select = panel.querySelector( '[data-menucraft-parent-select]' );
-		if ( ! select ) {
-			return;
-		}
-		var currentValue = select.value;
-		while ( select.options.length > 1 ) {
-			select.remove( 1 );
-		}
-		state.cache.forEach( function ( row ) {
-			var opt = document.createElement( 'option' );
-			opt.value       = String( row.id );
-			opt.textContent = row.name;
-			select.appendChild( opt );
-		} );
-		select.value = currentValue;
-	}
-
 	// -------- Row-level event delegation ---------
 
 	document.addEventListener( 'click', function ( event ) {
@@ -836,7 +809,6 @@
 				if ( state ) {
 					removeFromCache( state, ctx.id );
 					removeRow( state, ctx.id );
-					refreshParentDropdown( state );
 				}
 				showToast( i18n.deleteSuccess || 'Deleted.', 'success' );
 				closeModal( button.closest( '.menucraft-modal' ) );
@@ -875,7 +847,6 @@
 		}
 
 		state.body.appendChild( state.buildRow( entity ) );
-		refreshParentDropdown( state );
 	}
 
 	function replaceRow( state, entity ) {
@@ -888,7 +859,6 @@
 		} else {
 			state.body.appendChild( fresh );
 		}
-		refreshParentDropdown( state );
 	}
 
 	function removeRow( state, id ) {

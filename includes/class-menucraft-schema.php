@@ -51,7 +51,7 @@ class MenuCraft_Schema {
 
 		$statements = array();
 
-		// Categories.
+		// Categories — flat, no hierarchy.
 		$statements[] = "CREATE TABLE {$t['categories']} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			name varchar(200) NOT NULL,
@@ -59,18 +59,16 @@ class MenuCraft_Schema {
 			description text NULL,
 			color varchar(20) NULL,
 			media_id bigint(20) unsigned NULL,
-			parent_id bigint(20) unsigned NULL,
 			sort_order int(11) NOT NULL DEFAULT 0,
 			is_active tinyint(1) NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
 			UNIQUE KEY slug (slug),
-			KEY parent_id (parent_id),
 			KEY is_active (is_active)
 		) {$charset};";
 
-		// Tags (identical structure to categories per product decision).
+		// Tags — flat, no hierarchy (identical structure to categories).
 		$statements[] = "CREATE TABLE {$t['tags']} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			name varchar(200) NOT NULL,
@@ -78,14 +76,12 @@ class MenuCraft_Schema {
 			description text NULL,
 			color varchar(20) NULL,
 			media_id bigint(20) unsigned NULL,
-			parent_id bigint(20) unsigned NULL,
 			sort_order int(11) NOT NULL DEFAULT 0,
 			is_active tinyint(1) NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
 			UNIQUE KEY slug (slug),
-			KEY parent_id (parent_id),
 			KEY is_active (is_active)
 		) {$charset};";
 
@@ -274,6 +270,23 @@ class MenuCraft_Schema {
 			);
 			if ( $exists ) {
 				$wpdb->query( "ALTER TABLE `{$allergens}` DROP COLUMN `media_id`" ); // phpcs:ignore WordPress.DB
+			}
+		}
+
+		if ( version_compare( $from_version, '1.2', '<' ) ) {
+			// Categories and tags are flat now — remove parent_id from both.
+			foreach ( array( 'categories', 'tags' ) as $key ) {
+				$table  = $tables[ $key ];
+				$exists = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					$wpdb->prepare(
+						"SHOW COLUMNS FROM `{$table}` LIKE %s", // phpcs:ignore WordPress.DB
+						'parent_id'
+					)
+				);
+				if ( $exists ) {
+					// Dropping the column also removes any single-column index on it.
+					$wpdb->query( "ALTER TABLE `{$table}` DROP COLUMN `parent_id`" ); // phpcs:ignore WordPress.DB
+				}
 			}
 		}
 	}

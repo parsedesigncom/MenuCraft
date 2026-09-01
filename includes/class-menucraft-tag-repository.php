@@ -117,11 +117,6 @@ class MenuCraft_Tag_Repository {
 			$formats[]    = '%s';
 		}
 
-		if ( ! empty( $data['parent_id'] ) ) {
-			$row['parent_id'] = (int) $data['parent_id'];
-			$formats[]        = '%d';
-		}
-
 		if ( ! empty( $data['media_id'] ) ) {
 			$row['media_id'] = (int) $data['media_id'];
 			$formats[]       = '%d';
@@ -171,7 +166,6 @@ class MenuCraft_Tag_Repository {
 		$assign( 'description', '%s' );
 		$assign( 'color', '%s' );
 		$assign( 'media_id', '%d', true );
-		$assign( 'parent_id', '%d', true );
 		$assign( 'sort_order', '%d' );
 		$assign( 'is_active', '%d' );
 
@@ -231,7 +225,6 @@ class MenuCraft_Tag_Repository {
 			'description' => isset( $row['description'] ) ? (string) $row['description'] : '',
 			'color'       => isset( $row['color'] ) ? (string) $row['color'] : '',
 			'media_id'    => isset( $row['media_id'] ) ? (int) $row['media_id'] : 0,
-			'parent_id'   => isset( $row['parent_id'] ) ? (int) $row['parent_id'] : 0,
 			'sort_order'  => (int) $row['sort_order'],
 			'is_active'   => (int) $row['is_active'] === 1,
 			'created_at'  => (string) $row['created_at'],

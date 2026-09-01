@@ -195,10 +195,6 @@ class MenuCraft_REST {
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
 			),
-			'parent_id'   => array(
-				'type'              => 'integer',
-				'sanitize_callback' => 'absint',
-			),
 			'sort_order'  => array(
 				'type'              => 'integer',
 				'sanitize_callback' => 'absint',
@@ -213,7 +209,6 @@ class MenuCraft_REST {
 			$args['description']['default'] = '';
 			$args['color']['default']       = '';
 			$args['media_id']['default']    = 0;
-			$args['parent_id']['default']   = 0;
 			$args['sort_order']['default']  = 0;
 			$args['is_active']['default']   = true;
 		}
@@ -304,7 +299,6 @@ class MenuCraft_REST {
 				'description' => (string) $request->get_param( 'description' ),
 				'color'       => (string) $request->get_param( 'color' ),
 				'media_id'    => (int) $request->get_param( 'media_id' ),
-				'parent_id'   => (int) $request->get_param( 'parent_id' ),
 				'sort_order'  => (int) $request->get_param( 'sort_order' ),
 				'is_active'   => (bool) $request->get_param( 'is_active' ) ? 1 : 0,
 			)
@@ -358,7 +352,7 @@ class MenuCraft_REST {
 			);
 		}
 
-		foreach ( array( 'description', 'color', 'media_id', 'parent_id', 'sort_order' ) as $field ) {
+		foreach ( array( 'description', 'color', 'media_id', 'sort_order' ) as $field ) {
 			if ( $request->has_param( $field ) ) {
 				$data[ $field ] = $request->get_param( $field );
 			}
@@ -408,26 +402,16 @@ class MenuCraft_REST {
 	}
 
 	/**
-	 * Validate parent_id (must exist, may not be self) and media_id
-	 * (must be an image attachment) when the payload provides them.
+	 * Validate that media_id (if provided and > 0) references an image
+	 * attachment. Kept for term-like resources that carry an image.
 	 *
 	 * @param WP_REST_Request $request  Request.
 	 * @param string          $repo     Fully qualified repository class name.
-	 * @param int             $self_id  When updating, disallow parent = self.
+	 * @param int             $self_id  Reserved for future relation checks.
 	 * @return true|WP_Error
 	 */
 	private static function validate_relations( WP_REST_Request $request, $repo, $self_id ) {
-		if ( $request->has_param( 'parent_id' ) ) {
-			$parent_id = (int) $request->get_param( 'parent_id' );
-			if ( $parent_id > 0 ) {
-				if ( $parent_id === (int) $self_id ) {
-					return new WP_Error( 'menucraft_invalid_parent', __( 'A record cannot be its own parent.', 'menucraft' ), array( 'status' => 400 ) );
-				}
-				if ( null === call_user_func( array( $repo, 'find' ), $parent_id ) ) {
-					return new WP_Error( 'menucraft_invalid_parent', __( 'Parent does not exist.', 'menucraft' ), array( 'status' => 400 ) );
-				}
-			}
-		}
+		unset( $repo, $self_id );
 
 		if ( $request->has_param( 'media_id' ) ) {
 			$media_id = (int) $request->get_param( 'media_id' );

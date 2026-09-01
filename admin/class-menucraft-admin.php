@@ -174,6 +174,24 @@ class MenuCraft_Admin {
 			array( $this, 'render_placeholder' )
 		);
 
+		$this->page_hooks[] = add_submenu_page(
+			'menucraft',
+			__( 'MenuCraft Help & Documentation', 'menucraft' ),
+			__( 'Help & Docs', 'menucraft' ),
+			'manage_options',
+			'menucraft-help',
+			array( $this, 'render_placeholder' )
+		);
+
+		$this->page_hooks[] = add_submenu_page(
+			'menucraft',
+			__( 'About MenuCraft', 'menucraft' ),
+			__( 'About', 'menucraft' ),
+			'manage_options',
+			'menucraft-about',
+			array( $this, 'render_placeholder' )
+		);
+
 		// add_menu_page / add_submenu_page return false when the current user
 		// lacks the capability — filter those out to keep the list truthy.
 		$this->page_hooks = array_values( array_filter( $this->page_hooks ) );

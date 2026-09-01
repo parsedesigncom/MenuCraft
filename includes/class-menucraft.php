@@ -57,6 +57,9 @@ class MenuCraft {
 	private function define_admin_hooks() {
 		$admin = new MenuCraft_Admin( MENUCRAFT_TEXT_DOMAIN, MENUCRAFT_VERSION );
 		$this->loader->add_action( 'admin_menu', $admin, 'register_admin_menu' );
+		$this->loader->add_action( 'admin_enqueue_scripts', $admin, 'enqueue_styles' );
+		$this->loader->add_action( 'admin_enqueue_scripts', $admin, 'enqueue_scripts' );
+		$this->loader->add_filter( 'admin_body_class', $admin, 'admin_body_class' );
 		$this->loader->add_action( 'admin_init', 'MenuCraft_Schema', 'maybe_upgrade' );
 	}
 

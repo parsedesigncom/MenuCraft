@@ -27,6 +27,16 @@ class MenuCraft_Admin {
 	private $version;
 
 	/**
+	 * Hook suffixes returned by add_menu_page / add_submenu_page.
+	 *
+	 * Populated during register_admin_menu() and consulted by enqueue and
+	 * body-class filters to scope work to MenuCraft screens only.
+	 *
+	 * @var string[]
+	 */
+	private $page_hooks = array();
+
+	/**
 	 * Constructor.
 	 *
 	 * @param string $plugin_name Plugin handle used for asset identifiers.
@@ -38,17 +48,49 @@ class MenuCraft_Admin {
 	}
 
 	/**
-	 * Enqueue admin styles.
+	 * Enqueue admin styles on MenuCraft screens only.
+	 *
+	 * @param string $hook_suffix Current admin page hook.
 	 */
-	public function enqueue_styles() {
-		// Styles will be enqueued here in future iterations.
+	public function enqueue_styles( $hook_suffix ) {
+		if ( ! $this->is_menucraft_screen( $hook_suffix ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'menucraft-admin',
+			MENUCRAFT_PLUGIN_URL . 'assets/css/menucraft-admin.css',
+			array(),
+			$this->version
+		);
 	}
 
 	/**
-	 * Enqueue admin scripts.
+	 * Enqueue admin scripts on MenuCraft screens only.
+	 *
+	 * @param string $hook_suffix Current admin page hook.
 	 */
-	public function enqueue_scripts() {
+	public function enqueue_scripts( $hook_suffix ) {
+		if ( ! $this->is_menucraft_screen( $hook_suffix ) ) {
+			return;
+		}
+
 		// Scripts will be enqueued here in future iterations.
+	}
+
+	/**
+	 * Append a body class on MenuCraft screens so CSS can scope safely.
+	 *
+	 * @param string $classes Space-separated body classes.
+	 * @return string
+	 */
+	public function admin_body_class( $classes ) {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( $screen && in_array( $screen->id, $this->page_hooks, true ) ) {
+			$classes .= ' menucraft-admin';
+		}
+
+		return $classes;
 	}
 
 	/**
@@ -60,7 +102,7 @@ class MenuCraft_Admin {
 	 * UI is built.
 	 */
 	public function register_admin_menu() {
-		add_menu_page(
+		$this->page_hooks[] = add_menu_page(
 			__( 'MenuCraft', 'menucraft' ),
 			__( 'MenuCraft', 'menucraft' ),
 			'manage_options',
@@ -69,7 +111,7 @@ class MenuCraft_Admin {
 			'dashicons-coffee'
 		);
 
-		add_submenu_page(
+		$this->page_hooks[] = add_submenu_page(
 			'menucraft',
 			__( 'MenuCraft Dashboard', 'menucraft' ),
 			__( 'Dashboard', 'menucraft' ),
@@ -78,7 +120,7 @@ class MenuCraft_Admin {
 			array( $this, 'render_admin_page' )
 		);
 
-		add_submenu_page(
+		$this->page_hooks[] = add_submenu_page(
 			'menucraft',
 			__( 'Items', 'menucraft' ),
 			__( 'Items', 'menucraft' ),
@@ -87,7 +129,7 @@ class MenuCraft_Admin {
 			array( $this, 'render_placeholder' )
 		);
 
-		add_submenu_page(
+		$this->page_hooks[] = add_submenu_page(
 			'menucraft',
 			__( 'Categories', 'menucraft' ),
 			__( 'Categories', 'menucraft' ),
@@ -96,7 +138,7 @@ class MenuCraft_Admin {
 			array( $this, 'render_placeholder' )
 		);
 
-		add_submenu_page(
+		$this->page_hooks[] = add_submenu_page(
 			'menucraft',
 			__( 'Tags', 'menucraft' ),
 			__( 'Tags', 'menucraft' ),
@@ -105,7 +147,7 @@ class MenuCraft_Admin {
 			array( $this, 'render_placeholder' )
 		);
 
-		add_submenu_page(
+		$this->page_hooks[] = add_submenu_page(
 			'menucraft',
 			__( 'Allergens', 'menucraft' ),
 			__( 'Allergens', 'menucraft' ),
@@ -114,7 +156,7 @@ class MenuCraft_Admin {
 			array( $this, 'render_placeholder' )
 		);
 
-		add_submenu_page(
+		$this->page_hooks[] = add_submenu_page(
 			'menucraft',
 			__( 'Offers', 'menucraft' ),
 			__( 'Offers', 'menucraft' ),
@@ -123,7 +165,7 @@ class MenuCraft_Admin {
 			array( $this, 'render_placeholder' )
 		);
 
-		add_submenu_page(
+		$this->page_hooks[] = add_submenu_page(
 			'menucraft',
 			__( 'Options', 'menucraft' ),
 			__( 'Options', 'menucraft' ),
@@ -131,6 +173,10 @@ class MenuCraft_Admin {
 			'menucraft-options',
 			array( $this, 'render_placeholder' )
 		);
+
+		// add_menu_page / add_submenu_page return false when the current user
+		// lacks the capability — filter those out to keep the list truthy.
+		$this->page_hooks = array_values( array_filter( $this->page_hooks ) );
 	}
 
 	/**
@@ -153,5 +199,15 @@ class MenuCraft_Admin {
 		}
 
 		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-placeholder.php';
+	}
+
+	/**
+	 * True when the given hook suffix belongs to a MenuCraft screen.
+	 *
+	 * @param string $hook_suffix Hook suffix passed by admin_enqueue_scripts.
+	 * @return bool
+	 */
+	private function is_menucraft_screen( $hook_suffix ) {
+		return in_array( $hook_suffix, $this->page_hooks, true );
 	}
 }

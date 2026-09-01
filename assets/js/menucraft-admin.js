@@ -1,26 +1,27 @@
 /**
  * MenuCraft admin behaviour — vanilla JS, no library dependencies.
  *
- * Off-canvas panel:
- *  - open on click of [data-menucraft-panel-open="<panel-id>"]
- *  - close on click of [data-menucraft-panel-close] (X, Cancel, backdrop)
- *  - close on Escape key
+ * Off-canvas panel (with sub-panel stacking):
+ *  - open on click of [data-menucraft-panel-open="<id>"]
+ *  - open a sub-panel on top of the current one via
+ *    [data-menucraft-subpanel-open="<id>"]. The parent panel gets the
+ *    `menucraft-offcanvas-behind` class so the user can visually tell
+ *    they are one level deeper.
+ *  - close on click of [data-menucraft-panel-close] or Escape.
  *
  * Confirm modal:
- *  - open programmatically via openModal(id)
- *  - close on click of [data-menucraft-modal-close]
+ *  - open programmatically via openModal(id).
  *
- * Media picker:
- *  - opens native wp.media library (loaded by wp_enqueue_media())
- *  - stores attachment id in a hidden input, updates preview
+ * Media picker: opens wp.media, stores attachment ID in hidden input.
  *
- * Lists (resource-agnostic):
- *  - every <table data-menucraft-list="<resource>"> is initialized on load;
- *    the table also declares its panel + delete-modal via data-attrs.
- *  - inline is_active toggle (PUT), Edit (opens panel pre-filled), Delete
- *    (opens confirm modal → DELETE), Create (POST) via REST.
- *  - form submit uses data-menucraft-endpoint + data-menucraft-mode to
- *    choose between POST and PUT.
+ * Lists (resource-agnostic): every <table data-menucraft-list="<resource>">
+ * is initialised on load with a resource-specific row builder.
+ *
+ * Chips: [data-menucraft-chips="<resource>"] renders selectable chips from
+ * the cached list of that resource, collected into a hidden multi-value.
+ *
+ * Item variants: managed in-memory in the item form's JS state, edited in
+ * a sub-panel, submitted alongside the item payload.
  */
 ( function () {
 	'use strict';
@@ -28,16 +29,19 @@
 	var settings = ( typeof window.menucraftAdmin === 'object' && window.menucraftAdmin ) || {};
 	var i18n     = settings.i18n || {};
 
-	var OPEN_CLASS  = 'menucraft-offcanvas-is-open';
-	var MODAL_OPEN  = 'menucraft-modal-is-open';
-	var BODY_LOCK   = 'menucraft-offcanvas-open';
-	var lastFocused = null;
+	var OPEN_CLASS   = 'menucraft-offcanvas-is-open';
+	var BEHIND_CLASS = 'menucraft-offcanvas-behind';
+	var MODAL_OPEN   = 'menucraft-modal-is-open';
+	var BODY_LOCK    = 'menucraft-offcanvas-open';
 
-	// Per-resource state: cache of rows + DOM refs.
-	var listStates = {};
+	var panelStack   = []; // Ordered list of currently-open panel IDs (bottom → top).
+	var focusStack   = []; // Element to focus when each panel closes.
+	var listStates   = {}; // Per-resource state (cache + DOM refs + row builder).
+	var deleteContext = null; // { id, name, resource } while the delete modal is open.
 
-	// Delete-flow context (set when the confirm modal is opened).
-	var deleteContext = null;
+	// State that only the item form uses — variants live in JS memory
+	// between "Manage Variants" clicks and the eventual form submit.
+	var itemFormState = { variants: [] };
 
 	// ============================================================ Panel ==
 
@@ -47,8 +51,19 @@
 			return;
 		}
 
-		lastFocused = document.activeElement;
+		// Dim the panel that was on top before this one opens.
+		if ( panelStack.length ) {
+			var top = document.getElementById( panelStack[ panelStack.length - 1 ] );
+			if ( top ) {
+				top.classList.add( BEHIND_CLASS );
+			}
+		}
+
+		focusStack.push( document.activeElement );
+		panelStack.push( id );
+
 		panel.classList.add( OPEN_CLASS );
+		panel.classList.remove( BEHIND_CLASS );
 		panel.setAttribute( 'aria-hidden', 'false' );
 		document.body.classList.add( BODY_LOCK );
 
@@ -64,17 +79,32 @@
 		if ( ! panel ) {
 			return;
 		}
+		var id = panel.id;
 		panel.classList.remove( OPEN_CLASS );
 		panel.setAttribute( 'aria-hidden', 'true' );
+
+		// Pop this panel off the stack (should be the top).
+		var idx = panelStack.lastIndexOf( id );
+		if ( idx > -1 ) {
+			panelStack.splice( idx, 1 );
+		}
+
+		// Un-dim the new top-of-stack, if any.
+		if ( panelStack.length ) {
+			var newTop = document.getElementById( panelStack[ panelStack.length - 1 ] );
+			if ( newTop ) {
+				newTop.classList.remove( BEHIND_CLASS );
+			}
+		}
 
 		if ( ! document.querySelector( '.' + OPEN_CLASS + ', .' + MODAL_OPEN ) ) {
 			document.body.classList.remove( BODY_LOCK );
 		}
 
-		if ( lastFocused && typeof lastFocused.focus === 'function' ) {
-			lastFocused.focus();
+		var toRestore = focusStack.pop();
+		if ( toRestore && typeof toRestore.focus === 'function' ) {
+			toRestore.focus();
 		}
-		lastFocused = null;
 	}
 
 	document.addEventListener( 'click', function ( event ) {
@@ -86,6 +116,13 @@
 				resetPanelToCreateMode( panelId );
 			}
 			openPanel( panelId );
+			return;
+		}
+
+		var subOpener = event.target.closest( '[data-menucraft-subpanel-open]' );
+		if ( subOpener ) {
+			event.preventDefault();
+			openPanel( subOpener.getAttribute( 'data-menucraft-subpanel-open' ) );
 			return;
 		}
 
@@ -103,7 +140,7 @@
 		if ( ! modal ) {
 			return;
 		}
-		lastFocused = document.activeElement;
+		focusStack.push( document.activeElement );
 		modal.classList.add( MODAL_OPEN );
 		modal.setAttribute( 'aria-hidden', 'false' );
 		document.body.classList.add( BODY_LOCK );
@@ -124,11 +161,10 @@
 		if ( ! document.querySelector( '.' + OPEN_CLASS + ', .' + MODAL_OPEN ) ) {
 			document.body.classList.remove( BODY_LOCK );
 		}
-
-		if ( lastFocused && typeof lastFocused.focus === 'function' ) {
-			lastFocused.focus();
+		var toRestore = focusStack.pop();
+		if ( toRestore && typeof toRestore.focus === 'function' ) {
+			toRestore.focus();
 		}
-		lastFocused = null;
 	}
 
 	document.addEventListener( 'click', function ( event ) {
@@ -148,9 +184,8 @@
 			closeModal( modal );
 			return;
 		}
-		var panel = document.querySelector( '.menucraft-offcanvas.' + OPEN_CLASS );
-		if ( panel ) {
-			closePanel( panel );
+		if ( panelStack.length ) {
+			closePanel( document.getElementById( panelStack[ panelStack.length - 1 ] ) );
 		}
 	} );
 
@@ -309,6 +344,24 @@
 		var saveButton = form.querySelector( '[data-menucraft-submit]' ) || form.querySelector( 'button[type="submit"]' );
 		var payload    = collectFormData( form );
 
+		// Chip selectors add their arrays to the payload.
+		collectChipSelections( form, payload );
+
+		// Items include their in-memory variants list.
+		if ( 'items' === endpoint ) {
+			payload.variants = itemFormState.variants.map( function ( v ) {
+				return {
+					label:      v.label,
+					price:      v.price,
+					sort_order: v.sort_order,
+				};
+			} );
+			// Price: empty string means "unset" — send explicit null.
+			if ( payload.price === '' ) {
+				payload.price = null;
+			}
+		}
+
 		var path   = 'edit' === mode && editId ? endpoint + '/' + editId : endpoint;
 		var method = 'edit' === mode && editId ? 'PUT' : 'POST';
 
@@ -324,9 +377,10 @@
 					form.querySelectorAll( '[data-menucraft-media-picker]' ),
 					clearMedia
 				);
+				itemFormState.variants = [];
+
 				closePanel( panel );
 
-				// Reflect the mutation in the associated list if any.
 				var state = listStates[ endpoint ];
 				if ( state ) {
 					if ( 'edit' === mode ) {
@@ -368,6 +422,18 @@
 		return data;
 	}
 
+	function collectChipSelections( form, payload ) {
+		var containers = form.querySelectorAll( '[data-menucraft-chips-name]' );
+		Array.prototype.forEach.call( containers, function ( container ) {
+			var name = container.getAttribute( 'data-menucraft-chips-name' );
+			var ids  = Array.prototype.map.call(
+				container.querySelectorAll( '.menucraft-chip.menucraft-chip-selected' ),
+				function ( chip ) { return parseInt( chip.getAttribute( 'data-id' ), 10 ); }
+			).filter( function ( n ) { return ! isNaN( n ); } );
+			payload[ name ] = ids;
+		} );
+	}
+
 	function setBusy( button, busy ) {
 		if ( ! button ) {
 			return;
@@ -405,6 +471,21 @@
 			clearMedia
 		);
 
+		// Reset chips (deselect all) and re-render from cache.
+		Array.prototype.forEach.call(
+			form.querySelectorAll( '[data-menucraft-chips]' ),
+			function ( container ) {
+				renderChips( container, [] );
+			}
+		);
+
+		// Reset item variants state + refresh UI counter.
+		if ( form.getAttribute( 'data-menucraft-endpoint' ) === 'items' ) {
+			itemFormState.variants = [];
+			renderVariantsSummary();
+			renderVariantsList();
+		}
+
 		var title = panel.querySelector( '[data-menucraft-title-create]' );
 		if ( title ) {
 			title.textContent = title.getAttribute( 'data-menucraft-title-create' );
@@ -432,8 +513,11 @@
 		setFieldValue( form, 'code', entity.code || '' );
 		setFieldValue( form, 'name', entity.name || '' );
 		setFieldValue( form, 'description', entity.description || '' );
+		setFieldValue( form, 'description_short', entity.description_short || '' );
+		setFieldValue( form, 'description_long', entity.description_long || '' );
 		setFieldValue( form, 'color', entity.color || '#3858e9' );
 		setFieldValue( form, 'sort_order', String( entity.sort_order || 0 ) );
+		setFieldValue( form, 'price', entity.price === null || entity.price === undefined ? '' : String( entity.price ) );
 
 		var activeBox = form.querySelector( '[name="is_active"]' );
 		if ( activeBox ) {
@@ -443,6 +527,29 @@
 		var picker = form.querySelector( '[data-menucraft-media-picker]' );
 		if ( picker ) {
 			setMediaByUrl( picker, entity.media_id, entity.media_url );
+		}
+
+		// Chip selections.
+		Array.prototype.forEach.call(
+			form.querySelectorAll( '[data-menucraft-chips]' ),
+			function ( container ) {
+				var name = container.getAttribute( 'data-menucraft-chips-name' );
+				var selected = ( entity[ name ] || [] ).map( function ( n ) { return parseInt( n, 10 ); } );
+				renderChips( container, selected );
+			}
+		);
+
+		// Item variants → in-memory state.
+		if ( form.getAttribute( 'data-menucraft-endpoint' ) === 'items' ) {
+			itemFormState.variants = ( entity.variants || [] ).map( function ( v ) {
+				return {
+					label:      v.label || '',
+					price:      typeof v.price === 'number' ? v.price : parseFloat( v.price ) || 0,
+					sort_order: v.sort_order || 0,
+				};
+			} );
+			renderVariantsSummary();
+			renderVariantsList();
 		}
 
 		var title = panel.querySelector( '[data-menucraft-title-edit]' );
@@ -467,13 +574,11 @@
 
 	// =========================================== Lists (multi-resource) ==
 
-	// Per-resource rendering config. New shape-compatible resources add an
-	// entry here; row layouts diverge (e.g. allergens have no thumbnail/color)
-	// via dedicated build functions.
 	var listConfigs = {
 		categories: { buildRow: buildTermRow,     colspan: 7 },
 		tags:       { buildRow: buildTermRow,     colspan: 7 },
 		allergens:  { buildRow: buildAllergenRow, colspan: 6 },
+		items:      { buildRow: buildItemRow,     colspan: 7 },
 	};
 
 	function initLists() {
@@ -497,6 +602,38 @@
 			};
 			fetchList( listStates[ resource ] );
 		} );
+
+		// If the items screen is present, prefetch relation resources so
+		// chips are ready by the time the item panel is opened.
+		if ( listStates.items ) {
+			ensureResourceLoaded( 'categories' );
+			ensureResourceLoaded( 'tags' );
+			ensureResourceLoaded( 'allergens' );
+		}
+	}
+
+	function ensureResourceLoaded( resource ) {
+		if ( listStates[ resource ] ) {
+			return;
+		}
+		listStates[ resource ] = {
+			resource: resource,
+			table:    null,
+			body:     null,
+			cache:    [],
+			panelId:  '',
+			deleteModalId: '',
+			buildRow: function () { return null; },
+			colspan:  0,
+		};
+		rest( resource )
+			.then( function ( rows ) {
+				listStates[ resource ].cache = Array.isArray( rows ) ? rows : [];
+				refreshChipsFor( resource );
+			} )
+			.catch( function () {
+				// Silent — chips will just render empty state.
+			} );
 	}
 
 	function fetchList( state ) {
@@ -541,24 +678,8 @@
 		var tr = document.createElement( 'tr' );
 		tr.setAttribute( 'data-menucraft-row-id', String( entity.id ) );
 
-		// Thumbnail.
-		var tdThumb = document.createElement( 'td' );
-		tdThumb.className = 'menucraft-col-thumb';
-		if ( entity.media_url ) {
-			var img = document.createElement( 'img' );
-			img.src = entity.media_url;
-			img.alt = '';
-			img.className = 'menucraft-thumb';
-			tdThumb.appendChild( img );
-		} else {
-			var placeholder = document.createElement( 'span' );
-			placeholder.className = 'menucraft-thumb menucraft-thumb-empty';
-			placeholder.setAttribute( 'aria-hidden', 'true' );
-			tdThumb.appendChild( placeholder );
-		}
-		tr.appendChild( tdThumb );
+		tr.appendChild( buildThumbCell( entity ) );
 
-		// Name (+ slug sub).
 		var tdName = document.createElement( 'td' );
 		tdName.className = 'menucraft-col-name';
 		var nameStrong   = document.createElement( 'strong' );
@@ -572,7 +693,6 @@
 		}
 		tr.appendChild( tdName );
 
-		// Color swatch.
 		var tdColor = document.createElement( 'td' );
 		tdColor.className = 'menucraft-col-color';
 		if ( entity.color ) {
@@ -586,7 +706,6 @@
 		}
 		tr.appendChild( tdColor );
 
-		// Description (truncated).
 		var tdDesc = document.createElement( 'td' );
 		tdDesc.className   = 'menucraft-col-desc';
 		tdDesc.textContent = truncate( entity.description || '', 15 );
@@ -595,25 +714,187 @@
 		}
 		tr.appendChild( tdDesc );
 
-		// Active toggle.
-		var tdActive = document.createElement( 'td' );
-		tdActive.className = 'menucraft-col-active';
-		tdActive.appendChild( buildActiveToggle( entity ) );
-		tr.appendChild( tdActive );
-
-		// Dates.
-		var tdDates = document.createElement( 'td' );
-		tdDates.className = 'menucraft-col-dates';
-		tdDates.appendChild( buildDatesCell( entity ) );
-		tr.appendChild( tdDates );
-
-		// Actions.
-		var tdActions = document.createElement( 'td' );
-		tdActions.className = 'menucraft-col-actions';
-		tdActions.appendChild( buildActionsCell( entity ) );
-		tr.appendChild( tdActions );
+		tr.appendChild( buildActiveCell( entity ) );
+		tr.appendChild( buildDatesCellWrapped( entity ) );
+		tr.appendChild( buildActionsCellWrapped( entity ) );
 
 		return tr;
+	}
+
+	function buildAllergenRow( entity ) {
+		var tr = document.createElement( 'tr' );
+		tr.setAttribute( 'data-menucraft-row-id', String( entity.id ) );
+
+		var tdCode = document.createElement( 'td' );
+		tdCode.className = 'menucraft-col-code';
+		var codeBadge    = document.createElement( 'span' );
+		codeBadge.className   = 'menucraft-code-badge';
+		codeBadge.textContent = entity.code || '—';
+		tdCode.appendChild( codeBadge );
+		tr.appendChild( tdCode );
+
+		var tdName = document.createElement( 'td' );
+		tdName.className = 'menucraft-col-name';
+		var nameStrong   = document.createElement( 'strong' );
+		nameStrong.textContent = entity.name;
+		tdName.appendChild( nameStrong );
+		tr.appendChild( tdName );
+
+		var tdDesc = document.createElement( 'td' );
+		tdDesc.className   = 'menucraft-col-desc';
+		tdDesc.textContent = truncate( entity.description || '', 15 );
+		if ( entity.description ) {
+			tdDesc.title = entity.description;
+		}
+		tr.appendChild( tdDesc );
+
+		tr.appendChild( buildActiveCell( entity ) );
+		tr.appendChild( buildDatesCellWrapped( entity ) );
+		tr.appendChild( buildActionsCellWrapped( entity ) );
+
+		return tr;
+	}
+
+	function buildItemRow( entity ) {
+		var tr = document.createElement( 'tr' );
+		tr.setAttribute( 'data-menucraft-row-id', String( entity.id ) );
+
+		tr.appendChild( buildThumbCell( entity ) );
+
+		var tdName = document.createElement( 'td' );
+		tdName.className = 'menucraft-col-name';
+		var nameStrong   = document.createElement( 'strong' );
+		nameStrong.textContent = entity.name;
+		tdName.appendChild( nameStrong );
+		if ( entity.description_short ) {
+			var sub = document.createElement( 'div' );
+			sub.className   = 'menucraft-cell-sub';
+			sub.textContent = truncate( entity.description_short, 60 );
+			tdName.appendChild( sub );
+		}
+		tr.appendChild( tdName );
+
+		var tdCats = document.createElement( 'td' );
+		tdCats.className = 'menucraft-col-categories';
+		tdCats.appendChild( buildRelatedNames( entity.category_ids, 'categories' ) );
+		tr.appendChild( tdCats );
+
+		var tdPrice = document.createElement( 'td' );
+		tdPrice.className = 'menucraft-col-price';
+		tdPrice.appendChild( buildPriceCell( entity ) );
+		tr.appendChild( tdPrice );
+
+		tr.appendChild( buildActiveCell( entity ) );
+		tr.appendChild( buildDatesCellWrapped( entity ) );
+		tr.appendChild( buildActionsCellWrapped( entity ) );
+
+		return tr;
+	}
+
+	function buildThumbCell( entity ) {
+		var td = document.createElement( 'td' );
+		td.className = 'menucraft-col-thumb';
+		if ( entity.media_url ) {
+			var img = document.createElement( 'img' );
+			img.src = entity.media_url;
+			img.alt = '';
+			img.className = 'menucraft-thumb';
+			td.appendChild( img );
+		} else {
+			var placeholder = document.createElement( 'span' );
+			placeholder.className = 'menucraft-thumb menucraft-thumb-empty';
+			placeholder.setAttribute( 'aria-hidden', 'true' );
+			td.appendChild( placeholder );
+		}
+		return td;
+	}
+
+	function buildActiveCell( entity ) {
+		var td = document.createElement( 'td' );
+		td.className = 'menucraft-col-active';
+		td.appendChild( buildActiveToggle( entity ) );
+		return td;
+	}
+
+	function buildDatesCellWrapped( entity ) {
+		var td = document.createElement( 'td' );
+		td.className = 'menucraft-col-dates';
+		td.appendChild( buildDatesCell( entity ) );
+		return td;
+	}
+
+	function buildActionsCellWrapped( entity ) {
+		var td = document.createElement( 'td' );
+		td.className = 'menucraft-col-actions';
+		td.appendChild( buildActionsCell( entity ) );
+		return td;
+	}
+
+	function buildPriceCell( entity ) {
+		var wrap = document.createElement( 'div' );
+		wrap.className = 'menucraft-cell-price';
+
+		var variants = ( entity.variants || [] ).filter( function ( v ) {
+			return v && ( typeof v.price === 'number' ? true : ! isNaN( parseFloat( v.price ) ) );
+		} );
+
+		if ( variants.length ) {
+			var min = variants.reduce( function ( acc, v ) {
+				var p = typeof v.price === 'number' ? v.price : parseFloat( v.price );
+				return p < acc ? p : acc;
+			}, Infinity );
+			var fromSpan = document.createElement( 'span' );
+			fromSpan.className = 'menucraft-cell-sub';
+			fromSpan.textContent = i18n.from || 'from';
+			wrap.appendChild( fromSpan );
+			wrap.appendChild( document.createTextNode( ' ' ) );
+			var strong = document.createElement( 'strong' );
+			strong.textContent = formatPrice( min );
+			wrap.appendChild( strong );
+			return wrap;
+		}
+
+		if ( entity.price !== null && entity.price !== undefined && entity.price !== '' ) {
+			var strong2 = document.createElement( 'strong' );
+			strong2.textContent = formatPrice( entity.price );
+			wrap.appendChild( strong2 );
+			return wrap;
+		}
+
+		var muted = document.createElement( 'span' );
+		muted.className   = 'menucraft-cell-sub';
+		muted.textContent = i18n.noPrice || 'no price';
+		wrap.appendChild( muted );
+		return wrap;
+	}
+
+	function buildRelatedNames( ids, resource ) {
+		var wrap  = document.createElement( 'div' );
+		wrap.className = 'menucraft-related-list';
+		var state = listStates[ resource ];
+		if ( ! ids || ! ids.length || ! state || ! state.cache.length ) {
+			wrap.textContent = '—';
+			return wrap;
+		}
+		var byId = {};
+		state.cache.forEach( function ( r ) { byId[ r.id ] = r; } );
+		ids.forEach( function ( id ) {
+			var row = byId[ id ];
+			if ( ! row ) {
+				return;
+			}
+			var pill = document.createElement( 'span' );
+			pill.className = 'menucraft-related-pill';
+			if ( row.color ) {
+				pill.style.borderColor = row.color;
+			}
+			pill.textContent = row.name;
+			wrap.appendChild( pill );
+		} );
+		if ( ! wrap.children.length ) {
+			wrap.textContent = '—';
+		}
+		return wrap;
 	}
 
 	function buildActiveToggle( entity ) {
@@ -678,6 +959,86 @@
 		}
 		return text.substring( 0, max ) + '…';
 	}
+
+	function formatPrice( value ) {
+		if ( value === null || value === '' || value === undefined ) {
+			return '—';
+		}
+		var num = typeof value === 'number' ? value : parseFloat( value );
+		if ( isNaN( num ) ) {
+			return '—';
+		}
+		return num.toFixed( 2 ) + ' ' + ( settings.currency || '' );
+	}
+
+	// -------- Chips (relation selector) -------- //
+
+	function renderChips( container, selectedIds ) {
+		var resource = container.getAttribute( 'data-menucraft-chips' );
+		var emptyMsg = container.getAttribute( 'data-menucraft-chips-empty' ) || '';
+		var state    = listStates[ resource ];
+
+		container.innerHTML = '';
+
+		if ( ! state || ! state.cache.length ) {
+			var empty = document.createElement( 'span' );
+			empty.className   = 'menucraft-chips-empty';
+			empty.textContent = emptyMsg;
+			container.appendChild( empty );
+			return;
+		}
+
+		var selectedSet = {};
+		( selectedIds || [] ).forEach( function ( id ) { selectedSet[ id ] = true; } );
+
+		state.cache.forEach( function ( row ) {
+			var chip = document.createElement( 'button' );
+			chip.type      = 'button';
+			chip.className = 'menucraft-chip';
+			if ( selectedSet[ row.id ] ) {
+				chip.classList.add( 'menucraft-chip-selected' );
+			}
+			chip.setAttribute( 'data-id', String( row.id ) );
+			if ( row.color ) {
+				chip.style.setProperty( '--menucraft-chip-color', row.color );
+			}
+			if ( row.code ) {
+				var code = document.createElement( 'span' );
+				code.className   = 'menucraft-chip-code';
+				code.textContent = row.code;
+				chip.appendChild( code );
+			}
+			var label = document.createElement( 'span' );
+			label.className   = 'menucraft-chip-label';
+			label.textContent = row.name;
+			chip.appendChild( label );
+			container.appendChild( chip );
+		} );
+	}
+
+	function refreshChipsFor( resource ) {
+		var containers = document.querySelectorAll( '[data-menucraft-chips="' + resource + '"]' );
+		Array.prototype.forEach.call( containers, function ( container ) {
+			// Preserve any current selection.
+			var selected = Array.prototype.map.call(
+				container.querySelectorAll( '.menucraft-chip.menucraft-chip-selected' ),
+				function ( c ) { return parseInt( c.getAttribute( 'data-id' ), 10 ); }
+			);
+			renderChips( container, selected );
+		} );
+	}
+
+	document.addEventListener( 'click', function ( event ) {
+		var chip = event.target.closest( '.menucraft-chip' );
+		if ( ! chip ) {
+			return;
+		}
+		if ( ! chip.closest( '[data-menucraft-chips]' ) ) {
+			return;
+		}
+		event.preventDefault();
+		chip.classList.toggle( 'menucraft-chip-selected' );
+	} );
 
 	// -------- Row-level event delegation ---------
 
@@ -822,8 +1183,6 @@
 			} );
 	}
 
-	// -------- Cache + DOM helpers ---------
-
 	function updateCache( state, entity ) {
 		for ( var i = 0; i < state.cache.length; i++ ) {
 			if ( state.cache[ i ].id === entity.id ) {
@@ -847,6 +1206,10 @@
 		}
 
 		state.body.appendChild( state.buildRow( entity ) );
+
+		// Categories/tags/allergens being added should refresh open chip
+		// containers so newly created relations become selectable.
+		refreshChipsFor( state.resource );
 	}
 
 	function replaceRow( state, entity ) {
@@ -859,6 +1222,7 @@
 		} else {
 			state.body.appendChild( fresh );
 		}
+		refreshChipsFor( state.resource );
 	}
 
 	function removeRow( state, id ) {
@@ -869,60 +1233,141 @@
 		if ( ! state.body.querySelector( 'tr' ) ) {
 			state.body.appendChild( buildStatusRow( i18n.empty || 'No entries yet.', state.colspan ) );
 		}
+		refreshChipsFor( state.resource );
 	}
 
-	// -------- Allergen row (leaner: code / name / desc / active / dates / actions) --
+	// ======================================== Item variants (sub-panel) ==
 
-	function buildAllergenRow( entity ) {
-		var tr = document.createElement( 'tr' );
-		tr.setAttribute( 'data-menucraft-row-id', String( entity.id ) );
-
-		// Code (styled badge).
-		var tdCode = document.createElement( 'td' );
-		tdCode.className = 'menucraft-col-code';
-		var codeBadge    = document.createElement( 'span' );
-		codeBadge.className   = 'menucraft-code-badge';
-		codeBadge.textContent = entity.code || '—';
-		tdCode.appendChild( codeBadge );
-		tr.appendChild( tdCode );
-
-		// Name.
-		var tdName = document.createElement( 'td' );
-		tdName.className = 'menucraft-col-name';
-		var nameStrong   = document.createElement( 'strong' );
-		nameStrong.textContent = entity.name;
-		tdName.appendChild( nameStrong );
-		tr.appendChild( tdName );
-
-		// Description (truncated).
-		var tdDesc = document.createElement( 'td' );
-		tdDesc.className   = 'menucraft-col-desc';
-		tdDesc.textContent = truncate( entity.description || '', 15 );
-		if ( entity.description ) {
-			tdDesc.title = entity.description;
+	function renderVariantsSummary() {
+		var counter = document.querySelector( '[data-menucraft-variants-count]' );
+		if ( ! counter ) {
+			return;
 		}
-		tr.appendChild( tdDesc );
-
-		// Active toggle.
-		var tdActive = document.createElement( 'td' );
-		tdActive.className = 'menucraft-col-active';
-		tdActive.appendChild( buildActiveToggle( entity ) );
-		tr.appendChild( tdActive );
-
-		// Dates.
-		var tdDates = document.createElement( 'td' );
-		tdDates.className = 'menucraft-col-dates';
-		tdDates.appendChild( buildDatesCell( entity ) );
-		tr.appendChild( tdDates );
-
-		// Actions.
-		var tdActions = document.createElement( 'td' );
-		tdActions.className = 'menucraft-col-actions';
-		tdActions.appendChild( buildActionsCell( entity ) );
-		tr.appendChild( tdActions );
-
-		return tr;
+		var n = itemFormState.variants.length;
+		if ( n === 0 ) {
+			counter.textContent = i18n.variantsNone || 'None';
+		} else {
+			var template = i18n.variantsCount || '%d variant(s)';
+			counter.textContent = template.replace( '%d', String( n ) );
+		}
 	}
+
+	function renderVariantsList() {
+		var container = document.querySelector( '[data-menucraft-variants-list]' );
+		if ( ! container ) {
+			return;
+		}
+		container.innerHTML = '';
+
+		itemFormState.variants.forEach( function ( variant, index ) {
+			var row = document.createElement( 'div' );
+			row.className = 'menucraft-variant-row';
+			row.setAttribute( 'data-menucraft-variant-index', String( index ) );
+
+			var labelField = document.createElement( 'div' );
+			labelField.className = 'menucraft-variant-cell menucraft-variant-cell-label';
+			var labelInput       = document.createElement( 'input' );
+			labelInput.type        = 'text';
+			labelInput.value       = variant.label || '';
+			labelInput.placeholder = i18n.variantLabelHint || '';
+			labelInput.setAttribute( 'data-menucraft-variant-field', 'label' );
+			labelInput.setAttribute( 'aria-label', i18n.variantLabel || 'Label' );
+			labelField.appendChild( labelInput );
+
+			var priceField = document.createElement( 'div' );
+			priceField.className = 'menucraft-variant-cell menucraft-variant-cell-price';
+			var priceInput       = document.createElement( 'input' );
+			priceInput.type  = 'number';
+			priceInput.step  = '0.01';
+			priceInput.min   = '0';
+			priceInput.value = typeof variant.price === 'number' ? variant.price.toFixed( 2 ) : String( variant.price || 0 );
+			priceInput.setAttribute( 'data-menucraft-variant-field', 'price' );
+			priceInput.setAttribute( 'aria-label', i18n.variantPrice || 'Price' );
+			priceField.appendChild( priceInput );
+
+			var removeCell = document.createElement( 'div' );
+			removeCell.className = 'menucraft-variant-cell menucraft-variant-cell-remove';
+			var removeBtn        = document.createElement( 'button' );
+			removeBtn.type      = 'button';
+			removeBtn.className = 'button-link menucraft-btn-icon';
+			removeBtn.title     = i18n.variantRemove || 'Remove';
+			removeBtn.setAttribute( 'aria-label', i18n.variantRemove || 'Remove' );
+			removeBtn.setAttribute( 'data-menucraft-variant-remove', '' );
+			removeBtn.innerHTML = '<span class="dashicons dashicons-trash" aria-hidden="true"></span>';
+			removeCell.appendChild( removeBtn );
+
+			row.appendChild( labelField );
+			row.appendChild( priceField );
+			row.appendChild( removeCell );
+			container.appendChild( row );
+		} );
+
+		var empty = document.querySelector( '[data-menucraft-variants-empty]' );
+		if ( empty ) {
+			empty.hidden = itemFormState.variants.length > 0;
+		}
+	}
+
+	document.addEventListener( 'click', function ( event ) {
+		var addBtn = event.target.closest( '[data-menucraft-variant-add]' );
+		if ( addBtn ) {
+			event.preventDefault();
+			itemFormState.variants.push( { label: '', price: 0, sort_order: itemFormState.variants.length } );
+			renderVariantsList();
+			renderVariantsSummary();
+			// Focus new row's label field.
+			var container = document.querySelector( '[data-menucraft-variants-list]' );
+			if ( container ) {
+				var rows = container.querySelectorAll( '.menucraft-variant-row' );
+				var last = rows[ rows.length - 1 ];
+				if ( last ) {
+					var input = last.querySelector( 'input' );
+					if ( input ) input.focus();
+				}
+			}
+			return;
+		}
+
+		var rmBtn = event.target.closest( '[data-menucraft-variant-remove]' );
+		if ( rmBtn ) {
+			event.preventDefault();
+			var row = rmBtn.closest( '[data-menucraft-variant-index]' );
+			if ( ! row ) {
+				return;
+			}
+			var idx = parseInt( row.getAttribute( 'data-menucraft-variant-index' ), 10 );
+			if ( isNaN( idx ) ) {
+				return;
+			}
+			itemFormState.variants.splice( idx, 1 );
+			renderVariantsList();
+			renderVariantsSummary();
+		}
+	} );
+
+	document.addEventListener( 'input', function ( event ) {
+		var field = event.target.closest( '[data-menucraft-variant-field]' );
+		if ( ! field ) {
+			return;
+		}
+		var row = field.closest( '[data-menucraft-variant-index]' );
+		if ( ! row ) {
+			return;
+		}
+		var idx = parseInt( row.getAttribute( 'data-menucraft-variant-index' ), 10 );
+		if ( isNaN( idx ) || ! itemFormState.variants[ idx ] ) {
+			return;
+		}
+		var name = field.getAttribute( 'data-menucraft-variant-field' );
+		if ( name === 'price' ) {
+			itemFormState.variants[ idx ].price = parseFloat( field.value ) || 0;
+		} else {
+			itemFormState.variants[ idx ][ name ] = field.value;
+		}
+		if ( name === 'label' ) {
+			renderVariantsSummary();
+		}
+	} );
 
 	// =========================================================== Toast ==
 

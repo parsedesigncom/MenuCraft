@@ -386,6 +386,57 @@ body.menucraft-offcanvas-open {
 	}
 }
 
+/* Sub-panel: sits above the main panel (higher z-index and offset) so
+   the user sees the parent as a dimmed frame behind. */
+.menucraft-offcanvas-sub {
+	z-index: 100000;
+}
+
+.menucraft-offcanvas-sub .menucraft-offcanvas-panel {
+	max-width: 640px;
+	width: 45%;
+}
+
+@media screen and (max-width: 782px) {
+	.menucraft-offcanvas-sub .menucraft-offcanvas-panel {
+		max-width: none;
+		width: 92%;
+	}
+}
+
+/* Any panel that got shoved to the back stack gets desaturated and
+   pushed slightly aside so the user notices they descended one level. */
+.menucraft-offcanvas.menucraft-offcanvas-behind .menucraft-offcanvas-panel {
+	filter: brightness( 0.9 ) saturate( 0.75 );
+	pointer-events: none;
+	transform: translateX( -24px ) scale( 0.985 );
+	transform-origin: right center;
+	transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.menucraft-offcanvas.menucraft-offcanvas-behind .menucraft-offcanvas-backdrop {
+	pointer-events: none;
+}
+
+/* Header layout tweaks when a breadcrumb precedes the title. */
+.menucraft-offcanvas-title-group {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.menucraft-offcanvas-breadcrumb {
+	color: #8c92a4;
+	font-size: 12px;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+
+.menucraft-breadcrumb-sep {
+	margin: 0 4px;
+}
+
 /* ---- Form fields ------------------------------------------------------ */
 
 .menucraft-form .menucraft-field {
@@ -516,6 +567,69 @@ body.menucraft-offcanvas-open {
 	color: #7f1d1d;
 }
 
+/* ---- Chip selector ---------------------------------------------------- */
+
+.menucraft-chips {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	min-height: 34px;
+}
+
+.menucraft-chips-empty {
+	color: #8c92a4;
+	font-size: 13px;
+	font-style: italic;
+}
+
+.menucraft-chip {
+	--menucraft-chip-color: #d1d5db;
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid var( --menucraft-chip-color );
+	border-radius: 999px;
+	color: #1d2327;
+	cursor: pointer;
+	display: inline-flex;
+	font-size: 13px;
+	gap: 6px;
+	line-height: 1;
+	padding: 6px 12px;
+	transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.menucraft-chip:hover {
+	background: #f6f7f9;
+}
+
+.menucraft-chip:focus {
+	outline: 2px solid rgba( 56, 88, 233, 0.35 );
+	outline-offset: 1px;
+}
+
+.menucraft-chip-selected {
+	background: color-mix( in srgb, var( --menucraft-chip-color ) 12%, #ffffff );
+	border-color: var( --menucraft-chip-color );
+	box-shadow: 0 0 0 1px var( --menucraft-chip-color ) inset;
+	font-weight: 600;
+}
+
+.menucraft-chip-selected:hover {
+	background: color-mix( in srgb, var( --menucraft-chip-color ) 20%, #ffffff );
+}
+
+.menucraft-chip-code {
+	background: rgba( 55, 48, 163, 0.12 );
+	border-radius: 3px;
+	color: #3730a3;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 11px;
+	font-weight: 700;
+	padding: 2px 5px;
+	text-transform: uppercase;
+}
+
 /* ---- List table ------------------------------------------------------- */
 
 .menucraft-table {
@@ -528,12 +642,14 @@ body.menucraft-offcanvas-open {
 	vertical-align: middle;
 }
 
-.menucraft-col-thumb    { width: 68px;  }
-.menucraft-col-code     { width: 88px;  }
-.menucraft-col-color    { width: 70px;  }
-.menucraft-col-active   { width: 100px; }
-.menucraft-col-dates    { width: 180px; }
-.menucraft-col-actions  { width: 96px;  text-align: right; }
+.menucraft-col-thumb      { width: 68px;  }
+.menucraft-col-code       { width: 88px;  }
+.menucraft-col-color      { width: 70px;  }
+.menucraft-col-price      { width: 110px; }
+.menucraft-col-categories { width: 180px; }
+.menucraft-col-active     { width: 100px; }
+.menucraft-col-dates      { width: 180px; }
+.menucraft-col-actions    { width: 96px;  text-align: right; }
 
 .menucraft-code-badge {
 	background: #eef2ff;
@@ -744,6 +860,111 @@ body.menucraft-offcanvas-open {
 	background: #a11414;
 	border-color: #7f1d1d;
 	color: #ffffff;
+}
+
+/* ---- Item form specifics --------------------------------------------- */
+
+.menucraft-field-help {
+	color: #646970;
+	font-size: 12px;
+	line-height: 1.5;
+	margin: 6px 0 0;
+}
+
+.menucraft-variants-summary {
+	align-items: center;
+	background: #f6f7f9;
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	padding: 10px 14px;
+}
+
+.menucraft-variants-count {
+	color: #1d2327;
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.menucraft-variants-add.button {
+	align-items: center;
+	display: inline-flex;
+	gap: 4px;
+	margin-top: 8px;
+}
+
+.menucraft-variants-add.button .dashicons {
+	height: 18px;
+	line-height: 1;
+	width: 18px;
+}
+
+.menucraft-variants-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.menucraft-variant-row {
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	display: grid;
+	gap: 8px;
+	grid-template-columns: 1fr 130px auto;
+	padding: 8px;
+}
+
+.menucraft-variant-cell input {
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	box-sizing: border-box;
+	color: #1d2327;
+	font-size: 14px;
+	padding: 6px 10px;
+	width: 100%;
+}
+
+.menucraft-variant-cell input:focus {
+	border-color: #3858e9;
+	box-shadow: 0 0 0 2px rgba( 56, 88, 233, 0.2 );
+	outline: 0;
+}
+
+.menucraft-variants-empty {
+	color: #8c92a4;
+	font-size: 13px;
+	font-style: italic;
+	padding: 12px 0;
+	text-align: center;
+}
+
+/* Item list — categories + price cells */
+
+.menucraft-related-list {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.menucraft-related-pill {
+	background: #ffffff;
+	border: 1px solid #d1d5db;
+	border-radius: 999px;
+	color: #1d2327;
+	display: inline-block;
+	font-size: 11px;
+	padding: 2px 8px;
+}
+
+.menucraft-cell-price {
+	color: #1d2327;
+	font-size: 13px;
+	line-height: 1.4;
 }
 
 /* ---- Toast ------------------------------------------------------------ */

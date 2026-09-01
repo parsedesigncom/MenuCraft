@@ -92,23 +92,32 @@ class MenuCraft_Admin {
 			array(
 				'restUrl'   => esc_url_raw( rest_url( 'menucraft/v1/' ) ),
 				'restNonce' => wp_create_nonce( 'wp_rest' ),
+				'currency'  => '€',
 				'i18n'      => array(
-					'saving'        => __( 'Saving…', 'menucraft' ),
-					'saveSuccess'   => __( 'Saved.', 'menucraft' ),
-					'saveError'     => __( 'Save failed.', 'menucraft' ),
-					'updateSuccess' => __( 'Updated.', 'menucraft' ),
-					'deleteSuccess' => __( 'Deleted.', 'menucraft' ),
-					'deleteError'   => __( 'Delete failed.', 'menucraft' ),
-					'listError'     => __( 'Could not load list.', 'menucraft' ),
-					'empty'         => __( 'No entries yet.', 'menucraft' ),
-					'active'        => __( 'Active', 'menucraft' ),
-					'inactive'      => __( 'Inactive', 'menucraft' ),
-					'edit'          => __( 'Edit', 'menucraft' ),
-					'delete'        => __( 'Delete', 'menucraft' ),
-					'mediaTitle'    => __( 'Select Image', 'menucraft' ),
-					'mediaButton'   => __( 'Use this image', 'menucraft' ),
-					'mediaEmpty'    => __( 'No image selected', 'menucraft' ),
-					'mediaUnavail'  => __( 'Media library unavailable.', 'menucraft' ),
+					'saving'          => __( 'Saving…', 'menucraft' ),
+					'saveSuccess'     => __( 'Saved.', 'menucraft' ),
+					'saveError'       => __( 'Save failed.', 'menucraft' ),
+					'updateSuccess'   => __( 'Updated.', 'menucraft' ),
+					'deleteSuccess'   => __( 'Deleted.', 'menucraft' ),
+					'deleteError'     => __( 'Delete failed.', 'menucraft' ),
+					'listError'       => __( 'Could not load list.', 'menucraft' ),
+					'empty'           => __( 'No entries yet.', 'menucraft' ),
+					'active'          => __( 'Active', 'menucraft' ),
+					'inactive'        => __( 'Inactive', 'menucraft' ),
+					'edit'            => __( 'Edit', 'menucraft' ),
+					'delete'          => __( 'Delete', 'menucraft' ),
+					'mediaTitle'      => __( 'Select Image', 'menucraft' ),
+					'mediaButton'     => __( 'Use this image', 'menucraft' ),
+					'mediaEmpty'      => __( 'No image selected', 'menucraft' ),
+					'mediaUnavail'    => __( 'Media library unavailable.', 'menucraft' ),
+					'from'            => __( 'from', 'menucraft' ),
+					'noPrice'         => __( 'no price', 'menucraft' ),
+					'variantsNone'    => __( 'None', 'menucraft' ),
+					'variantsCount'   => __( '%d variant(s)', 'menucraft' ),
+					'variantLabel'    => __( 'Label', 'menucraft' ),
+					'variantPrice'    => __( 'Price', 'menucraft' ),
+					'variantRemove'   => __( 'Remove', 'menucraft' ),
+					'variantLabelHint' => __( 'e.g. Small, Medium, Large', 'menucraft' ),
 				),
 			)
 		);
@@ -162,7 +171,7 @@ class MenuCraft_Admin {
 			__( 'Items', 'menucraft' ),
 			'manage_options',
 			'menucraft-items',
-			array( $this, 'render_placeholder' )
+			array( $this, 'render_items_page' )
 		);
 
 		$this->page_hooks[] = add_submenu_page(
@@ -286,6 +295,17 @@ class MenuCraft_Admin {
 		}
 
 		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-allergens.php';
+	}
+
+	/**
+	 * Render the Items admin screen.
+	 */
+	public function render_items_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-items.php';
 	}
 
 	/**

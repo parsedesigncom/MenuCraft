@@ -52,6 +52,7 @@ class MenuCraft_REST {
 			self::register_term_routes( $resource );
 		}
 		self::register_allergen_routes();
+		self::register_item_routes();
 	}
 
 	/**
@@ -634,5 +635,343 @@ class MenuCraft_REST {
 			),
 			200
 		);
+	}
+
+	// ===================================================== Item handlers ==
+
+	/**
+	 * Register /items routes.
+	 */
+	private static function register_item_routes() {
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/items',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( __CLASS__, 'list_items' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( __CLASS__, 'create_item' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+					'args'                => self::item_args( true ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/items/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( __CLASS__, 'get_item' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( __CLASS__, 'update_item' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+					'args'                => self::item_args( false ),
+				),
+				array(
+					'methods'             => WP_REST_Server::DELETABLE,
+					'callback'            => array( __CLASS__, 'delete_item' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Argument schema for item create/update.
+	 *
+	 * Arrays (relations, variants) are declared without strict item
+	 * schemas so REST doesn't reject them; deeper validation happens in
+	 * the handler.
+	 *
+	 * @param bool $name_required Set false for updates.
+	 * @return array<string,array<string,mixed>>
+	 */
+	private static function item_args( $name_required ) {
+		$args = array(
+			'name'              => array(
+				'required'          => (bool) $name_required,
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'description_short' => array(
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_textarea_field',
+			),
+			'description_long'  => array(
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_textarea_field',
+			),
+			'price'             => array(
+				'sanitize_callback' => array( __CLASS__, 'sanitize_nullable_price' ),
+			),
+			'media_id'          => array(
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+			),
+			'sort_order'        => array(
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+			),
+			'is_active'         => array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+			),
+			'category_ids'      => array(
+				'type' => 'array',
+			),
+			'tag_ids'           => array(
+				'type' => 'array',
+			),
+			'allergen_ids'      => array(
+				'type' => 'array',
+			),
+			'variants'          => array(
+				'type' => 'array',
+			),
+		);
+
+		if ( $name_required ) {
+			$args['description_short']['default'] = '';
+			$args['description_long']['default']  = '';
+			$args['media_id']['default']          = 0;
+			$args['sort_order']['default']        = 0;
+			$args['is_active']['default']         = true;
+			$args['category_ids']['default']      = array();
+			$args['tag_ids']['default']           = array();
+			$args['allergen_ids']['default']      = array();
+			$args['variants']['default']          = array();
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Sanitize price: NULL passes through, empty string → null,
+	 * numbers → non-negative float.
+	 *
+	 * @param mixed $value Incoming value.
+	 * @return float|null
+	 */
+	public static function sanitize_nullable_price( $value ) {
+		if ( null === $value || '' === $value || 'null' === $value ) {
+			return null;
+		}
+		$num = (float) $value;
+		return $num < 0 ? 0.0 : $num;
+	}
+
+	/**
+	 * GET /items.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function list_items() {
+		$rows = MenuCraft_Item_Repository::all();
+		$rows = array_map( array( __CLASS__, 'present' ), $rows );
+		return new WP_REST_Response( $rows, 200 );
+	}
+
+	/**
+	 * GET /items/{id}.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function get_item( WP_REST_Request $request ) {
+		$id     = (int) $request->get_param( 'id' );
+		$entity = MenuCraft_Item_Repository::find( $id );
+		if ( null === $entity ) {
+			return self::not_found( 'item' );
+		}
+		return new WP_REST_Response( self::present( $entity ), 200 );
+	}
+
+	/**
+	 * POST /items.
+	 *
+	 * @param WP_REST_Request $request Sanitized request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function create_item( WP_REST_Request $request ) {
+		$name = trim( (string) $request->get_param( 'name' ) );
+		if ( '' === $name ) {
+			return new WP_Error( 'menucraft_invalid_name', __( 'Name is required.', 'menucraft' ), array( 'status' => 400 ) );
+		}
+
+		$validation = self::validate_item_relations( $request );
+		if ( is_wp_error( $validation ) ) {
+			return $validation;
+		}
+
+		$slug = MenuCraft_Slug::generate(
+			'items',
+			$name,
+			array( 'MenuCraft_Item_Repository', 'slug_exists' )
+		);
+
+		$entity = MenuCraft_Item_Repository::insert(
+			array(
+				'name'              => $name,
+				'slug'              => $slug,
+				'description_short' => (string) $request->get_param( 'description_short' ),
+				'description_long'  => (string) $request->get_param( 'description_long' ),
+				'price'             => $request->has_param( 'price' ) ? $request->get_param( 'price' ) : null,
+				'media_id'          => (int) $request->get_param( 'media_id' ),
+				'sort_order'        => (int) $request->get_param( 'sort_order' ),
+				'is_active'         => (bool) $request->get_param( 'is_active' ) ? 1 : 0,
+				'category_ids'      => (array) $request->get_param( 'category_ids' ),
+				'tag_ids'           => (array) $request->get_param( 'tag_ids' ),
+				'allergen_ids'      => (array) $request->get_param( 'allergen_ids' ),
+				'variants'          => (array) $request->get_param( 'variants' ),
+			)
+		);
+
+		if ( null === $entity ) {
+			return new WP_Error( 'menucraft_insert_failed', __( 'Could not save.', 'menucraft' ), array( 'status' => 500 ) );
+		}
+
+		return new WP_REST_Response( self::present( $entity ), 201 );
+	}
+
+	/**
+	 * PUT/PATCH /items/{id}.
+	 *
+	 * @param WP_REST_Request $request Sanitized request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function update_item( WP_REST_Request $request ) {
+		$id       = (int) $request->get_param( 'id' );
+		$existing = MenuCraft_Item_Repository::find( $id );
+		if ( null === $existing ) {
+			return self::not_found( 'item' );
+		}
+
+		$validation = self::validate_item_relations( $request );
+		if ( is_wp_error( $validation ) ) {
+			return $validation;
+		}
+
+		$data = array();
+
+		if ( $request->has_param( 'name' ) ) {
+			$name = trim( (string) $request->get_param( 'name' ) );
+			if ( '' === $name ) {
+				return new WP_Error( 'menucraft_invalid_name', __( 'Name is required.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+			$data['name'] = $name;
+
+			$data['slug'] = MenuCraft_Slug::generate(
+				'items',
+				$name,
+				function ( $candidate ) use ( $id ) {
+					return MenuCraft_Item_Repository::slug_exists( $candidate, $id );
+				}
+			);
+		}
+
+		foreach ( array( 'description_short', 'description_long', 'media_id', 'sort_order' ) as $field ) {
+			if ( $request->has_param( $field ) ) {
+				$data[ $field ] = $request->get_param( $field );
+			}
+		}
+
+		if ( $request->has_param( 'price' ) ) {
+			$data['price'] = $request->get_param( 'price' );
+		}
+
+		if ( $request->has_param( 'is_active' ) ) {
+			$data['is_active'] = (bool) $request->get_param( 'is_active' ) ? 1 : 0;
+		}
+
+		foreach ( array( 'category_ids', 'tag_ids', 'allergen_ids', 'variants' ) as $field ) {
+			if ( $request->has_param( $field ) ) {
+				$data[ $field ] = (array) $request->get_param( $field );
+			}
+		}
+
+		$updated = MenuCraft_Item_Repository::update( $id, $data );
+		if ( null === $updated ) {
+			return new WP_Error( 'menucraft_update_failed', __( 'Could not update.', 'menucraft' ), array( 'status' => 500 ) );
+		}
+
+		return new WP_REST_Response( self::present( $updated ), 200 );
+	}
+
+	/**
+	 * DELETE /items/{id}.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function delete_item( WP_REST_Request $request ) {
+		$id       = (int) $request->get_param( 'id' );
+		$existing = MenuCraft_Item_Repository::find( $id );
+		if ( null === $existing ) {
+			return self::not_found( 'item' );
+		}
+
+		$ok = MenuCraft_Item_Repository::delete( $id );
+		if ( ! $ok ) {
+			return new WP_Error( 'menucraft_delete_failed', __( 'Could not delete.', 'menucraft' ), array( 'status' => 500 ) );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'deleted'  => true,
+				'id'       => $id,
+				'previous' => self::present( $existing ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * Validate item-specific relations: media_id must be an image, and
+	 * each ID in category_ids/tag_ids/allergen_ids must reference an
+	 * existing row.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return true|WP_Error
+	 */
+	private static function validate_item_relations( WP_REST_Request $request ) {
+		if ( $request->has_param( 'media_id' ) ) {
+			$media_id = (int) $request->get_param( 'media_id' );
+			if ( $media_id > 0 && ! wp_attachment_is_image( $media_id ) ) {
+				return new WP_Error( 'menucraft_invalid_media', __( 'Selected media is not an image.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+		}
+
+		$relation_specs = array(
+			'category_ids' => array( 'MenuCraft_Category_Repository', __( 'Unknown category.', 'menucraft' ) ),
+			'tag_ids'      => array( 'MenuCraft_Tag_Repository', __( 'Unknown tag.', 'menucraft' ) ),
+			'allergen_ids' => array( 'MenuCraft_Allergen_Repository', __( 'Unknown allergen.', 'menucraft' ) ),
+		);
+
+		foreach ( $relation_specs as $param => $spec ) {
+			if ( ! $request->has_param( $param ) ) {
+				continue;
+			}
+			$ids = (array) $request->get_param( $param );
+			foreach ( $ids as $id ) {
+				$int_id = (int) $id;
+				if ( $int_id <= 0 ) {
+					continue;
+				}
+				if ( null === call_user_func( array( $spec[0], 'find' ), $int_id ) ) {
+					return new WP_Error( 'menucraft_invalid_relation', $spec[1], array( 'status' => 400 ) );
+				}
+			}
+		}
+
+		return true;
 	}
 }

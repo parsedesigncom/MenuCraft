@@ -1,0 +1,49 @@
+# --- IDE / Editor ---
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.iml
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Logs ---
+*.log
+error_log
+debug.log
+
+# --- PHP / Composer ---
+/vendor/
+composer.phar
+
+# --- Node / Build-Tools (falls Assets gebaut werden) ---
+/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache/
+/dist/
+/build/
+
+# --- Environment / Secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- Test / Coverage ---
+/tests/coverage/
+.phpunit.result.cache
+
+# --- Backup- / Temp-Dateien ---
+*.bak
+*.swp
+*.tmp
+*~
+
+# --- Projekt-spezifisch ---
+CLAUDE.md
+NOT.md

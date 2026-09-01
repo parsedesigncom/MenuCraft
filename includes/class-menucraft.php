@@ -37,6 +37,9 @@ class MenuCraft {
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-i18n.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-schema.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-options.php';
+		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-slug.php';
+		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-category-repository.php';
+		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-rest.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'admin/class-menucraft-admin.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'public/class-menucraft-public.php';
 
@@ -61,6 +64,7 @@ class MenuCraft {
 		$this->loader->add_action( 'admin_enqueue_scripts', $admin, 'enqueue_scripts' );
 		$this->loader->add_filter( 'admin_body_class', $admin, 'admin_body_class' );
 		$this->loader->add_action( 'admin_init', 'MenuCraft_Schema', 'maybe_upgrade' );
+		$this->loader->add_action( 'rest_api_init', 'MenuCraft_REST', 'register_routes' );
 	}
 
 	/**

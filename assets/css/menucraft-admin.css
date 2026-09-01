@@ -214,3 +214,562 @@ body.menucraft-admin #wpfooter {
 		font-size: 18px;
 	}
 }
+
+/* ---- Header row (title + action button) ------------------------------ */
+
+.menucraft-page-header-row {
+	align-items: center;
+	display: flex;
+	gap: 16px;
+	justify-content: space-between;
+	margin: 0;
+}
+
+.menucraft-page-header-row .menucraft-page-title.menucraft-page-title {
+	margin: 0;
+}
+
+.menucraft-page-header-row + .menucraft-page-description {
+	margin-top: 12px;
+}
+
+.button.menucraft-btn-add {
+	align-items: center;
+	display: inline-flex;
+	flex-shrink: 0;
+	gap: 6px;
+}
+
+.button.menucraft-btn-add .dashicons {
+	font-size: 18px;
+	height: 18px;
+	line-height: 1;
+	width: 18px;
+}
+
+/* ---- Off-canvas panel ------------------------------------------------- */
+
+.menucraft-offcanvas {
+	bottom: 0;
+	left: 0;
+	pointer-events: none;
+	position: fixed;
+	right: 0;
+	top: 32px; /* WP admin bar height (desktop) */
+	z-index: 99998;
+}
+
+.menucraft-offcanvas-backdrop {
+	background: rgba(15, 23, 42, 0.35);
+	inset: 0;
+	opacity: 0;
+	pointer-events: none;
+	position: absolute;
+	transition: opacity 0.2s ease;
+}
+
+.menucraft-offcanvas-panel {
+	background: #ffffff;
+	bottom: 0;
+	box-shadow: -12px 0 32px rgba(15, 23, 42, 0.14);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	pointer-events: auto;
+	position: absolute;
+	right: 0;
+	top: 0;
+	transform: translateX(100%);
+	transition: transform 0.25s ease;
+	width: 50%;
+}
+
+.menucraft-offcanvas.menucraft-offcanvas-is-open .menucraft-offcanvas-backdrop {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.menucraft-offcanvas.menucraft-offcanvas-is-open .menucraft-offcanvas-panel {
+	transform: translateX(0);
+}
+
+.menucraft-offcanvas-panel > form {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+}
+
+.menucraft-offcanvas-header {
+	align-items: center;
+	border-bottom: 1px solid #e5e7eb;
+	display: flex;
+	flex: 0 0 auto;
+	gap: 12px;
+	justify-content: space-between;
+	padding: 18px 24px;
+}
+
+.menucraft-offcanvas-title {
+	color: #1d2327;
+	font-size: 18px;
+	font-weight: 600;
+	line-height: 1.25;
+	margin: 0;
+}
+
+.menucraft-offcanvas-close {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 4px;
+	color: #646970;
+	cursor: pointer;
+	display: inline-flex;
+	justify-content: center;
+	padding: 6px;
+}
+
+.menucraft-offcanvas-close:hover {
+	background: #f0f0f1;
+	color: #1d2327;
+}
+
+.menucraft-offcanvas-close .dashicons {
+	font-size: 20px;
+	height: 20px;
+	line-height: 1;
+	width: 20px;
+}
+
+.menucraft-offcanvas-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 24px;
+}
+
+.menucraft-offcanvas-footer {
+	align-items: center;
+	background: #fafbfc;
+	border-top: 1px solid #e5e7eb;
+	display: flex;
+	flex: 0 0 auto;
+	gap: 8px;
+	justify-content: flex-end;
+	padding: 14px 24px;
+}
+
+body.menucraft-offcanvas-open {
+	overflow: hidden;
+}
+
+@media screen and (max-width: 782px) {
+	.menucraft-offcanvas {
+		top: 46px; /* WP admin bar height (mobile) */
+	}
+
+	.menucraft-offcanvas-panel {
+		width: 95%;
+	}
+
+	.menucraft-offcanvas-header {
+		padding: 14px 18px;
+	}
+
+	.menucraft-offcanvas-body {
+		padding: 18px;
+	}
+
+	.menucraft-offcanvas-footer {
+		padding: 12px 18px;
+	}
+}
+
+/* ---- Form fields ------------------------------------------------------ */
+
+.menucraft-form .menucraft-field {
+	margin: 0 0 20px;
+}
+
+.menucraft-form .menucraft-field:last-child {
+	margin-bottom: 0;
+}
+
+.menucraft-form label {
+	color: #1d2327;
+	display: block;
+	font-size: 13px;
+	font-weight: 500;
+	margin: 0 0 6px;
+}
+
+.menucraft-form input[type="text"],
+.menucraft-form input[type="number"],
+.menucraft-form input[type="url"],
+.menucraft-form input[type="email"],
+.menucraft-form textarea,
+.menucraft-form select {
+	background: #ffffff;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	box-shadow: none;
+	box-sizing: border-box;
+	color: #1d2327;
+	display: block;
+	font-family: inherit;
+	font-size: 14px;
+	line-height: 1.4;
+	margin: 0;
+	max-width: 100%;
+	padding: 8px 12px;
+	width: 100%;
+}
+
+.menucraft-form textarea {
+	min-height: 96px;
+	resize: vertical;
+}
+
+.menucraft-form input:focus,
+.menucraft-form textarea:focus,
+.menucraft-form select:focus {
+	border-color: #3858e9;
+	box-shadow: 0 0 0 2px rgba(56, 88, 233, 0.2);
+	outline: 0;
+}
+
+.menucraft-form input[type="color"] {
+	background: #ffffff;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	cursor: pointer;
+	height: 40px;
+	padding: 4px;
+	width: 80px;
+}
+
+.menucraft-form .menucraft-field-checkbox label {
+	align-items: center;
+	cursor: pointer;
+	display: inline-flex;
+	font-weight: 400;
+	gap: 8px;
+	margin: 0;
+}
+
+.menucraft-form .menucraft-field-checkbox input {
+	margin: 0;
+}
+
+.menucraft-form .menucraft-required {
+	color: #d63638;
+	margin-left: 4px;
+}
+
+/* ---- Media picker ----------------------------------------------------- */
+
+.menucraft-media-picker {
+	display: block;
+}
+
+.menucraft-media-preview {
+	align-items: center;
+	background: #f6f7f8;
+	border: 1px dashed #d1d5db;
+	border-radius: 6px;
+	display: flex;
+	height: 160px;
+	justify-content: center;
+	margin-bottom: 8px;
+	overflow: hidden;
+	width: 160px;
+}
+
+.menucraft-media-preview:empty::before {
+	color: #8c92a4;
+	content: attr(data-empty);
+	font-size: 13px;
+}
+
+.menucraft-media-preview img {
+	display: block;
+	max-height: 100%;
+	max-width: 100%;
+	object-fit: cover;
+}
+
+.menucraft-media-actions {
+	align-items: center;
+	display: flex;
+	gap: 12px;
+}
+
+.menucraft-media-remove.button-link {
+	color: #b91c1c;
+	cursor: pointer;
+	padding: 0;
+	text-decoration: underline;
+}
+
+.menucraft-media-remove.button-link:hover {
+	color: #7f1d1d;
+}
+
+/* ---- List table ------------------------------------------------------- */
+
+.menucraft-table {
+	background: #ffffff;
+	margin: 0;
+}
+
+.menucraft-table th,
+.menucraft-table td {
+	vertical-align: middle;
+}
+
+.menucraft-col-thumb    { width: 68px;  }
+.menucraft-col-color    { width: 70px;  }
+.menucraft-col-active   { width: 100px; }
+.menucraft-col-dates    { width: 180px; }
+.menucraft-col-actions  { width: 96px;  text-align: right; }
+
+.menucraft-row-status td {
+	color: #646970;
+	font-style: italic;
+	text-align: center;
+	padding: 24px;
+}
+
+.menucraft-thumb {
+	background: #f6f7f8;
+	border-radius: 4px;
+	display: inline-block;
+	height: 50px;
+	object-fit: cover;
+	overflow: hidden;
+	vertical-align: middle;
+	width: 50px;
+}
+
+.menucraft-thumb-empty {
+	background-image: linear-gradient(45deg, #eef0f3 25%, transparent 25%),
+		linear-gradient(-45deg, #eef0f3 25%, transparent 25%),
+		linear-gradient(45deg, transparent 75%, #eef0f3 75%),
+		linear-gradient(-45deg, transparent 75%, #eef0f3 75%);
+	background-size: 8px 8px;
+	background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+}
+
+.menucraft-cell-sub {
+	color: #8c92a4;
+	font-size: 12px;
+	margin-top: 2px;
+}
+
+.menucraft-color-swatch {
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	display: inline-block;
+	height: 22px;
+	vertical-align: middle;
+	width: 36px;
+}
+
+.menucraft-cell-dates {
+	font-size: 12px;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+/* Active toggle (badge-style button) */
+.menucraft-toggle {
+	background: #f3f4f6;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	color: #6b7280;
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1;
+	padding: 5px 12px;
+	transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.menucraft-toggle:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.menucraft-toggle-on {
+	background: rgba(20, 128, 74, 0.12);
+	border-color: rgba(20, 128, 74, 0.3);
+	color: #14804a;
+}
+
+.menucraft-toggle-off {
+	background: #f3f4f6;
+	border-color: #e5e7eb;
+	color: #6b7280;
+}
+
+.menucraft-toggle:focus {
+	outline: 2px solid rgba(56, 88, 233, 0.35);
+	outline-offset: 1px;
+}
+
+/* Action buttons */
+.menucraft-cell-actions {
+	display: inline-flex;
+	gap: 4px;
+	justify-content: flex-end;
+}
+
+.menucraft-btn-icon.button-link {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 4px;
+	color: #646970;
+	cursor: pointer;
+	display: inline-flex;
+	height: 30px;
+	justify-content: center;
+	padding: 0;
+	text-decoration: none;
+	width: 30px;
+}
+
+.menucraft-btn-icon.button-link:hover {
+	background: #f0f0f1;
+	color: #1d2327;
+}
+
+.menucraft-btn-delete.button-link:hover {
+	background: rgba(185, 28, 28, 0.08);
+	color: #b91c1c;
+}
+
+/* ---- Modal ------------------------------------------------------------ */
+
+.menucraft-modal {
+	display: none;
+	inset: 0;
+	position: fixed;
+	z-index: 100000;
+}
+
+.menucraft-modal.menucraft-modal-is-open {
+	display: block;
+}
+
+.menucraft-modal-backdrop {
+	background: rgba(15, 23, 42, 0.45);
+	inset: 0;
+	position: absolute;
+}
+
+.menucraft-modal-dialog {
+	background: #ffffff;
+	border-radius: 10px;
+	box-shadow: 0 12px 40px rgba(15, 23, 42, 0.25);
+	display: flex;
+	flex-direction: column;
+	left: 50%;
+	max-width: 420px;
+	overflow: hidden;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 92%;
+}
+
+.menucraft-modal-header {
+	border-bottom: 1px solid #e5e7eb;
+	padding: 18px 22px;
+}
+
+.menucraft-modal-title {
+	color: #1d2327;
+	font-size: 16px;
+	font-weight: 600;
+	margin: 0;
+}
+
+.menucraft-modal-body {
+	color: #1d2327;
+	font-size: 14px;
+	line-height: 1.5;
+	padding: 20px 22px;
+}
+
+.menucraft-modal-body p {
+	margin: 0;
+}
+
+.menucraft-modal-footer {
+	align-items: center;
+	background: #fafbfc;
+	border-top: 1px solid #e5e7eb;
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	padding: 14px 22px;
+}
+
+.menucraft-btn-danger.button {
+	background: #b91c1c;
+	border-color: #7f1d1d;
+	color: #ffffff;
+	text-shadow: none;
+}
+
+.menucraft-btn-danger.button:hover,
+.menucraft-btn-danger.button:focus {
+	background: #a11414;
+	border-color: #7f1d1d;
+	color: #ffffff;
+}
+
+/* ---- Toast ------------------------------------------------------------ */
+
+.menucraft-toast {
+	background: #1d2327;
+	border-radius: 8px;
+	box-shadow: 0 10px 30px rgba(15, 23, 42, 0.24);
+	color: #ffffff;
+	cursor: pointer;
+	font-size: 14px;
+	line-height: 1.4;
+	max-width: 360px;
+	opacity: 0;
+	padding: 12px 16px;
+	position: fixed;
+	right: 24px;
+	top: 56px; /* below admin bar (32) + margin */
+	transform: translateY(-12px);
+	transition: opacity 0.22s ease, transform 0.22s ease;
+	z-index: 100001;
+}
+
+.menucraft-toast-visible {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.menucraft-toast-success {
+	background: #14804a;
+}
+
+.menucraft-toast-error {
+	background: #b91c1c;
+}
+
+@media screen and (max-width: 782px) {
+	.menucraft-toast {
+		left: 12px;
+		max-width: none;
+		right: 12px;
+		top: 62px; /* below mobile admin bar (46) + margin */
+	}
+}

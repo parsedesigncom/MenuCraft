@@ -75,7 +75,43 @@ class MenuCraft_Admin {
 			return;
 		}
 
-		// Scripts will be enqueued here in future iterations.
+		// Loads wp.media (used by our vanilla picker to open the native library UI).
+		wp_enqueue_media();
+
+		wp_enqueue_script(
+			'menucraft-admin',
+			MENUCRAFT_PLUGIN_URL . 'assets/js/menucraft-admin.js',
+			array(),
+			$this->version,
+			true
+		);
+
+		wp_localize_script(
+			'menucraft-admin',
+			'menucraftAdmin',
+			array(
+				'restUrl'   => esc_url_raw( rest_url( 'menucraft/v1/' ) ),
+				'restNonce' => wp_create_nonce( 'wp_rest' ),
+				'i18n'      => array(
+					'saving'        => __( 'Saving…', 'menucraft' ),
+					'saveSuccess'   => __( 'Saved.', 'menucraft' ),
+					'saveError'     => __( 'Save failed.', 'menucraft' ),
+					'updateSuccess' => __( 'Updated.', 'menucraft' ),
+					'deleteSuccess' => __( 'Deleted.', 'menucraft' ),
+					'deleteError'   => __( 'Delete failed.', 'menucraft' ),
+					'listError'     => __( 'Could not load list.', 'menucraft' ),
+					'empty'         => __( 'No entries yet.', 'menucraft' ),
+					'active'        => __( 'Active', 'menucraft' ),
+					'inactive'      => __( 'Inactive', 'menucraft' ),
+					'edit'          => __( 'Edit', 'menucraft' ),
+					'delete'        => __( 'Delete', 'menucraft' ),
+					'mediaTitle'    => __( 'Select Image', 'menucraft' ),
+					'mediaButton'   => __( 'Use this image', 'menucraft' ),
+					'mediaEmpty'    => __( 'No image selected', 'menucraft' ),
+					'mediaUnavail'  => __( 'Media library unavailable.', 'menucraft' ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -135,7 +171,7 @@ class MenuCraft_Admin {
 			__( 'Categories', 'menucraft' ),
 			'manage_options',
 			'menucraft-categories',
-			array( $this, 'render_placeholder' )
+			array( $this, 'render_categories_page' )
 		);
 
 		$this->page_hooks[] = add_submenu_page(
@@ -217,6 +253,17 @@ class MenuCraft_Admin {
 		}
 
 		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-placeholder.php';
+	}
+
+	/**
+	 * Render the Categories admin screen.
+	 */
+	public function render_categories_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-categories.php';
 	}
 
 	/**

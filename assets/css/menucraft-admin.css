@@ -642,6 +642,7 @@ body.menucraft-offcanvas-open {
 	vertical-align: middle;
 }
 
+.menucraft-col-select     { width: 36px;  text-align: center; }
 .menucraft-col-thumb      { width: 68px;  }
 .menucraft-col-code       { width: 88px;  }
 .menucraft-col-color      { width: 70px;  }
@@ -650,6 +651,14 @@ body.menucraft-offcanvas-open {
 .menucraft-col-active     { width: 100px; }
 .menucraft-col-dates      { width: 180px; }
 .menucraft-col-actions    { width: 96px;  text-align: right; }
+
+.menucraft-col-select input[type="checkbox"] {
+	margin: 0;
+}
+
+.menucraft-row-selected {
+	background: rgba( 56, 88, 233, 0.05 ) !important;
+}
 
 .menucraft-code-badge {
 	background: #eef2ff;
@@ -965,6 +974,281 @@ body.menucraft-offcanvas-open {
 	color: #1d2327;
 	font-size: 13px;
 	line-height: 1.4;
+}
+
+/* ---- Filters ---------------------------------------------------------- */
+
+.menucraft-filters {
+	background: #ffffff;
+	border: 1px solid #e5e7eb;
+	border-radius: 8px;
+	margin: 0 0 12px;
+}
+
+.menucraft-filters-header {
+	align-items: center;
+	border-bottom: 1px solid #e5e7eb;
+	cursor: pointer;
+	display: flex;
+	gap: 10px;
+	padding: 8px 14px;
+	user-select: none;
+}
+
+.menucraft-filters-header:hover {
+	background: #fafbfc;
+}
+
+.menucraft-filters-header:focus-visible {
+	outline: 2px solid rgba( 56, 88, 233, 0.35 );
+	outline-offset: -2px;
+}
+
+.menucraft-filters-chevron {
+	color: #8c92a4;
+	font-size: 18px;
+	height: 18px;
+	line-height: 1;
+	transition: transform 0.15s ease;
+	width: 18px;
+}
+
+.menucraft-filters:not( .menucraft-filters-collapsed ) .menucraft-filters-chevron {
+	transform: rotate( 90deg );
+}
+
+.menucraft-filters.menucraft-filters-collapsed {
+	border-color: #e5e7eb;
+}
+
+.menucraft-filters.menucraft-filters-collapsed .menucraft-filters-header {
+	border-bottom: 0;
+}
+
+.menucraft-filters.menucraft-filters-collapsed .menucraft-filters-body {
+	display: none;
+}
+
+.menucraft-filters-title {
+	align-items: center;
+	color: #1d2327;
+	display: inline-flex;
+	font-size: 13px;
+	font-weight: 600;
+	gap: 6px;
+}
+
+.menucraft-filters-title .dashicons {
+	color: #3730a3;
+	font-size: 16px;
+	height: 16px;
+	line-height: 1;
+	width: 16px;
+}
+
+.menucraft-filters-count {
+	background: rgba( 55, 48, 163, 0.12 );
+	border-radius: 999px;
+	color: #3730a3;
+	font-size: 11px;
+	font-weight: 600;
+	padding: 2px 8px;
+}
+
+.menucraft-filters-reset {
+	background: transparent;
+	border: 0;
+	color: #b91c1c;
+	cursor: pointer;
+	font-size: 12px;
+	margin-left: auto;
+	padding: 4px 8px;
+	text-decoration: underline;
+}
+
+.menucraft-filters-reset:hover {
+	color: #7f1d1d;
+}
+
+.menucraft-filters-body {
+	display: grid;
+	gap: 12px;
+	padding: 14px;
+}
+
+.menucraft-filter-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.menucraft-filter-field label {
+	color: #1d2327;
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+
+.menucraft-filter-field input[type="search"],
+.menucraft-filter-field input[type="number"],
+.menucraft-filter-field select {
+	background: #ffffff;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	color: #1d2327;
+	font-size: 14px;
+	padding: 6px 10px;
+	width: 100%;
+}
+
+.menucraft-filter-field input:focus,
+.menucraft-filter-field select:focus {
+	border-color: #3858e9;
+	box-shadow: 0 0 0 2px rgba( 56, 88, 233, 0.2 );
+	outline: 0;
+}
+
+.menucraft-filter-search input[type="search"] {
+	background-image: url( "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%238c92a4'><path d='M9 3a6 6 0 104.472 10.03l3.749 3.75a1 1 0 001.415-1.415l-3.75-3.749A6 6 0 009 3zm-4 6a4 4 0 118 0 4 4 0 01-8 0z'/></svg>" );
+	background-position: 10px 50%;
+	background-repeat: no-repeat;
+	background-size: 16px 16px;
+	padding-left: 34px;
+}
+
+.menucraft-filter-row {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: repeat( 3, minmax( 0, 1fr ) );
+}
+
+.menucraft-filter-range {
+	align-items: center;
+	display: flex;
+	gap: 6px;
+}
+
+.menucraft-filter-range input {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.menucraft-filter-range span {
+	color: #8c92a4;
+}
+
+.menucraft-chips-filter .menucraft-chip {
+	font-size: 12px;
+	padding: 4px 10px;
+}
+
+@media (max-width: 782px) {
+	.menucraft-filter-row {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ---- Bulk toolbar + panel -------------------------------------------- */
+
+.menucraft-bulk-toolbar {
+	align-items: center;
+	background: #eef2ff;
+	border: 1px solid #c7d2fe;
+	border-radius: 4px;
+	display: flex;
+	gap: 10px;
+	justify-content: space-between;
+	margin: 0 0 8px;
+	padding: 4px 10px;
+}
+
+/* Explicit override — my class rule above beats the UA [hidden] rule
+   otherwise, so the toolbar was visible even when hidden was set. */
+.menucraft-bulk-toolbar[hidden] {
+	display: none;
+}
+
+.menucraft-bulk-count {
+	color: #1d2327;
+	font-size: 12px;
+}
+
+.menucraft-bulk-count strong {
+	color: #3730a3;
+	font-size: 13px;
+	margin-right: 3px;
+}
+
+.menucraft-bulk-actions {
+	align-items: center;
+	display: flex;
+	gap: 4px;
+}
+
+.menucraft-bulk-actions .button {
+	font-size: 12px;
+	line-height: 1.6;
+	min-height: 26px;
+	padding: 0 10px;
+}
+
+.menucraft-offcanvas-title-badge {
+	background: rgba( 55, 48, 163, 0.12 );
+	border-radius: 999px;
+	color: #3730a3;
+	display: inline-block;
+	font-size: 12px;
+	font-weight: 600;
+	margin-left: 8px;
+	padding: 3px 10px;
+}
+
+.menucraft-bulk-op {
+	border-top: 1px solid #e5e7eb;
+	display: grid;
+	gap: 8px;
+	grid-template-columns: 1fr;
+	margin: 0 0 16px;
+	padding: 16px 0 0;
+}
+
+.menucraft-bulk-op:first-of-type {
+	border-top: 0;
+	padding-top: 0;
+}
+
+.menucraft-bulk-op-label {
+	color: #1d2327;
+	font-size: 13px;
+	font-weight: 600;
+	margin: 0;
+}
+
+.menucraft-bulk-op .menucraft-bulk-mode {
+	background: #ffffff;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	color: #1d2327;
+	font-size: 14px;
+	max-width: 260px;
+	padding: 6px 10px;
+	width: 100%;
+}
+
+.menucraft-bulk-op input[type="number"] {
+	background: #ffffff;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	color: #1d2327;
+	font-size: 14px;
+	max-width: 200px;
+	padding: 8px 12px;
+	width: 100%;
+}
+
+.menucraft-bulk-op .menucraft-field-help {
+	margin-top: 4px;
 }
 
 /* ---- Toast ------------------------------------------------------------ */

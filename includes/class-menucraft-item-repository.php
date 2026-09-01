@@ -259,6 +259,203 @@ class MenuCraft_Item_Repository {
 	}
 
 	/**
+	 * Apply bulk operations to a list of items and return the fresh items.
+	 *
+	 * The $operations shape:
+	 *   [
+	 *     'categories'     => ['mode' => 'replace|add|remove', 'ids' => int[]],
+	 *     'tags'           => ['mode' => 'replace|add|remove', 'ids' => int[]],
+	 *     'allergens'      => ['mode' => 'replace|add|remove', 'ids' => int[]],
+	 *     'base_price'     => ['mode' => 'replace|increase|decrease', 'value' => float],
+	 *     'variant_prices' => ['mode' => 'increase|decrease', 'value' => float],
+	 *     'is_active'      => bool,
+	 *   ]
+	 * Absent keys are no-ops.
+	 *
+	 * @param array<int,int>      $item_ids   Item IDs to touch.
+	 * @param array<string,mixed> $operations Operation dictionary (see above).
+	 * @return array<int,array<string,mixed>> Fresh hydrated items that were actually updated.
+	 */
+	public static function bulk_edit( array $item_ids, array $operations ) {
+		$updated = array();
+
+		foreach ( $item_ids as $raw_id ) {
+			$id = (int) $raw_id;
+			if ( $id <= 0 || null === self::find( $id ) ) {
+				continue;
+			}
+
+			self::apply_operations( $id, $operations );
+
+			$fresh = self::find( $id );
+			if ( $fresh ) {
+				$updated[] = $fresh;
+			}
+		}
+
+		return $updated;
+	}
+
+	/**
+	 * Apply the operations dictionary to a single item.
+	 *
+	 * @param int                 $item_id    Item ID.
+	 * @param array<string,mixed> $operations See bulk_edit().
+	 */
+	private static function apply_operations( $item_id, array $operations ) {
+		$relation_map = array(
+			'categories' => array( 'item_categories', 'category_id' ),
+			'tags'       => array( 'item_tags', 'tag_id' ),
+			'allergens'  => array( 'item_allergens', 'allergen_id' ),
+		);
+
+		foreach ( $relation_map as $key => $info ) {
+			if ( empty( $operations[ $key ] ) || ! is_array( $operations[ $key ] ) ) {
+				continue;
+			}
+			$mode = isset( $operations[ $key ]['mode'] ) ? (string) $operations[ $key ]['mode'] : '';
+			$ids  = isset( $operations[ $key ]['ids'] ) ? (array) $operations[ $key ]['ids'] : array();
+			list( $junction_key, $fk_column ) = $info;
+
+			if ( 'replace' === $mode ) {
+				self::sync_junction( $item_id, $junction_key, $fk_column, $ids );
+			} elseif ( 'add' === $mode ) {
+				self::junction_add( $item_id, $junction_key, $fk_column, $ids );
+			} elseif ( 'remove' === $mode ) {
+				self::junction_remove( $item_id, $junction_key, $fk_column, $ids );
+			}
+		}
+
+		if ( ! empty( $operations['base_price'] ) && is_array( $operations['base_price'] ) ) {
+			$mode  = isset( $operations['base_price']['mode'] ) ? (string) $operations['base_price']['mode'] : '';
+			$value = isset( $operations['base_price']['value'] ) ? (float) $operations['base_price']['value'] : 0.0;
+
+			if ( 'replace' === $mode ) {
+				self::update( $item_id, array( 'price' => $value ) );
+			} elseif ( 'increase' === $mode ) {
+				self::adjust_base_price( $item_id, $value );
+			} elseif ( 'decrease' === $mode ) {
+				self::adjust_base_price( $item_id, -1 * $value );
+			}
+		}
+
+		if ( ! empty( $operations['variant_prices'] ) && is_array( $operations['variant_prices'] ) ) {
+			$mode  = isset( $operations['variant_prices']['mode'] ) ? (string) $operations['variant_prices']['mode'] : '';
+			$value = isset( $operations['variant_prices']['value'] ) ? (float) $operations['variant_prices']['value'] : 0.0;
+
+			if ( 'increase' === $mode ) {
+				self::adjust_variant_prices( $item_id, $value );
+			} elseif ( 'decrease' === $mode ) {
+				self::adjust_variant_prices( $item_id, -1 * $value );
+			}
+		}
+
+		if ( array_key_exists( 'is_active', $operations ) ) {
+			self::update( $item_id, array( 'is_active' => $operations['is_active'] ? 1 : 0 ) );
+		}
+	}
+
+	/**
+	 * Adjust an item's base price by a delta (positive or negative). NULL
+	 * base prices are left untouched — "increase by X" on an item that has
+	 * no base price does nothing.
+	 *
+	 * @param int   $item_id Item ID.
+	 * @param float $delta   Signed amount to add.
+	 */
+	private static function adjust_base_price( $item_id, $delta ) {
+		global $wpdb;
+		$table = self::table();
+		$now   = current_time( 'mysql', 1 );
+
+		$wpdb->query( // phpcs:ignore WordPress.DB
+			$wpdb->prepare(
+				"UPDATE `{$table}` SET price = GREATEST(0, price + %f), updated_at = %s WHERE id = %d AND price IS NOT NULL", // phpcs:ignore WordPress.DB
+				$delta,
+				$now,
+				(int) $item_id
+			)
+		);
+	}
+
+	/**
+	 * Adjust every variant's price for an item by a delta, floored at 0.
+	 *
+	 * @param int   $item_id Item ID.
+	 * @param float $delta   Signed amount to add.
+	 */
+	private static function adjust_variant_prices( $item_id, $delta ) {
+		global $wpdb;
+		$tables = MenuCraft_Schema::tables();
+		$table  = $tables['item_variants'];
+		$now    = current_time( 'mysql', 1 );
+
+		$wpdb->query( // phpcs:ignore WordPress.DB
+			$wpdb->prepare(
+				"UPDATE `{$table}` SET price = GREATEST(0, price + %f), updated_at = %s WHERE item_id = %d", // phpcs:ignore WordPress.DB
+				$delta,
+				$now,
+				(int) $item_id
+			)
+		);
+	}
+
+	/**
+	 * INSERT IGNORE junction rows — silently skips existing pairs so
+	 * "add" doesn't error on already-linked entities.
+	 *
+	 * @param int    $item_id      Item ID.
+	 * @param string $junction_key Schema tables[] key.
+	 * @param string $fk_column    Foreign-key column.
+	 * @param array  $ids          Related entity IDs.
+	 */
+	private static function junction_add( $item_id, $junction_key, $fk_column, $ids ) {
+		global $wpdb;
+		$tables = MenuCraft_Schema::tables();
+		$table  = $tables[ $junction_key ];
+
+		$clean = array_unique( array_filter( array_map( 'intval', (array) $ids ) ) );
+		foreach ( $clean as $related_id ) {
+			$wpdb->query( // phpcs:ignore WordPress.DB
+				$wpdb->prepare(
+					"INSERT IGNORE INTO `{$table}` (item_id, {$fk_column}) VALUES (%d, %d)", // phpcs:ignore WordPress.DB
+					(int) $item_id,
+					(int) $related_id
+				)
+			);
+		}
+	}
+
+	/**
+	 * DELETE selected junction rows for an item.
+	 *
+	 * @param int    $item_id      Item ID.
+	 * @param string $junction_key Schema tables[] key.
+	 * @param string $fk_column    Foreign-key column.
+	 * @param array  $ids          Related entity IDs to detach.
+	 */
+	private static function junction_remove( $item_id, $junction_key, $fk_column, $ids ) {
+		global $wpdb;
+		$tables = MenuCraft_Schema::tables();
+		$table  = $tables[ $junction_key ];
+
+		$clean = array_unique( array_filter( array_map( 'intval', (array) $ids ) ) );
+		if ( empty( $clean ) ) {
+			return;
+		}
+
+		$placeholders = implode( ',', array_fill( 0, count( $clean ), '%d' ) );
+		$params       = array_merge( array( (int) $item_id ), $clean );
+
+		$wpdb->query( // phpcs:ignore WordPress.DB
+			$wpdb->prepare(
+				"DELETE FROM `{$table}` WHERE item_id = %d AND {$fk_column} IN ({$placeholders})", // phpcs:ignore WordPress.DB
+				$params
+			)
+		);
+	}
+
+	/**
 	 * Replace all rows in a junction table for a given item.
 	 *
 	 * @param int              $item_id      Item ID.

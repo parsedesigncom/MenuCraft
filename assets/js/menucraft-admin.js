@@ -43,6 +43,26 @@
 	// between "Manage Variants" clicks and the eventual form submit.
 	var itemFormState = { variants: [] };
 
+	// Per-resource selection state (Set of selected IDs). Only tables with
+	// data-menucraft-selectable participate.
+	var selections = {};
+
+	// Per-resource client-side filter state.
+	var filterState = {};
+
+	function emptyFilterState() {
+		return {
+			search: '',
+			category_ids: [],
+			tag_ids: [],
+			allergen_ids: [],
+			status: '',
+			price_min: null,
+			price_max: null,
+			image: '',
+		};
+	}
+
 	// ============================================================ Panel ==
 
 	function openPanel( id ) {
@@ -590,6 +610,7 @@
 				return;
 			}
 			var config = listConfigs[ resource ] || { buildRow: buildTermRow, colspan: 7 };
+			var selectable = table.hasAttribute( 'data-menucraft-selectable' );
 			listStates[ resource ] = {
 				resource:      resource,
 				table:         table,
@@ -598,8 +619,12 @@
 				panelId:       table.getAttribute( 'data-menucraft-panel' ) || '',
 				deleteModalId: table.getAttribute( 'data-menucraft-modal-delete' ) || '',
 				buildRow:      config.buildRow,
-				colspan:       config.colspan,
+				colspan:       config.colspan + ( selectable ? 1 : 0 ),
+				selectable:    selectable,
 			};
+			if ( selectable ) {
+				selections[ resource ] = {};
+			}
 			fetchList( listStates[ resource ] );
 		} );
 
@@ -609,6 +634,176 @@
 			ensureResourceLoaded( 'categories' );
 			ensureResourceLoaded( 'tags' );
 			ensureResourceLoaded( 'allergens' );
+		}
+
+		initFilters();
+	}
+
+	// =========================================================== Filters ==
+
+	function initFilters() {
+		var containers = document.querySelectorAll( '[data-menucraft-filters]' );
+		Array.prototype.forEach.call( containers, function ( container ) {
+			var resource = container.getAttribute( 'data-menucraft-filters' );
+			if ( ! resource ) return;
+
+			filterState[ resource ] = emptyFilterState();
+
+			// Render filter chip containers (empty selection initially).
+			Array.prototype.forEach.call(
+				container.querySelectorAll( '[data-menucraft-chips]' ),
+				function ( c ) { renderChips( c, [] ); }
+			);
+		} );
+	}
+
+	document.addEventListener( 'input', function ( event ) {
+		var input = event.target.closest( '[data-menucraft-filter]' );
+		if ( ! input ) return;
+		var container = input.closest( '[data-menucraft-filters]' );
+		if ( ! container ) return;
+		refreshFilterFor( container.getAttribute( 'data-menucraft-filters' ), container );
+	} );
+
+	document.addEventListener( 'change', function ( event ) {
+		var input = event.target.closest( '[data-menucraft-filter]' );
+		if ( ! input ) return;
+		var container = input.closest( '[data-menucraft-filters]' );
+		if ( ! container ) return;
+		refreshFilterFor( container.getAttribute( 'data-menucraft-filters' ), container );
+	} );
+
+	document.addEventListener( 'click', function ( event ) {
+		var resetBtn = event.target.closest( '[data-menucraft-filters-reset]' );
+		if ( resetBtn ) {
+			event.preventDefault();
+			event.stopPropagation();
+			var container = resetBtn.closest( '[data-menucraft-filters]' );
+			if ( ! container ) return;
+			resetFilters( container );
+			return;
+		}
+
+		var toggle = event.target.closest( '[data-menucraft-filters-toggle]' );
+		if ( toggle ) {
+			event.preventDefault();
+			toggleFiltersPanel( toggle );
+			return;
+		}
+
+		// Filter-chip clicks are handled by the global chip toggle; we
+		// need to re-apply the filter afterwards. RAF lets the toggle
+		// class settle before we read state.
+		var chip = event.target.closest( '.menucraft-chip' );
+		if ( chip ) {
+			var chipsContainer = chip.closest( '[data-menucraft-chips]' );
+			if ( ! chipsContainer ) return;
+			var filterContainer = chipsContainer.closest( '[data-menucraft-filters]' );
+			if ( filterContainer ) {
+				requestAnimationFrame( function () {
+					refreshFilterFor( filterContainer.getAttribute( 'data-menucraft-filters' ), filterContainer );
+				} );
+			}
+		}
+	} );
+
+	function toggleFiltersPanel( header ) {
+		var container = header.closest( '[data-menucraft-filters]' );
+		if ( ! container ) return;
+		var collapsed = container.classList.toggle( 'menucraft-filters-collapsed' );
+		header.setAttribute( 'aria-expanded', collapsed ? 'false' : 'true' );
+	}
+
+	// Space / Enter on the header behaves like a click.
+	document.addEventListener( 'keydown', function ( event ) {
+		if ( event.key !== 'Enter' && event.key !== ' ' ) {
+			return;
+		}
+		var toggle = event.target.closest( '[data-menucraft-filters-toggle]' );
+		if ( ! toggle ) return;
+		if ( event.target.closest( '[data-menucraft-filters-reset]' ) ) return;
+		event.preventDefault();
+		toggleFiltersPanel( toggle );
+	} );
+
+	function refreshFilterFor( resource, container ) {
+		var f = collectFilterState( container );
+		filterState[ resource ] = f;
+		updateFilterCount( container, f );
+		var state = listStates[ resource ];
+		if ( state ) {
+			renderTable( state );
+		}
+	}
+
+	function collectFilterState( container ) {
+		var s = emptyFilterState();
+
+		var inputs = container.querySelectorAll( '[data-menucraft-filter]' );
+		Array.prototype.forEach.call( inputs, function ( el ) {
+			var key = el.getAttribute( 'data-menucraft-filter' );
+			var raw = ( el.value || '' ).toString().trim();
+			if ( key === 'price_min' || key === 'price_max' ) {
+				s[ key ] = raw === '' ? null : parseFloat( raw );
+				if ( isNaN( s[ key ] ) ) s[ key ] = null;
+			} else {
+				s[ key ] = raw;
+			}
+		} );
+
+		var chips = container.querySelectorAll( '[data-menucraft-chips]' );
+		Array.prototype.forEach.call( chips, function ( c ) {
+			var resource = c.getAttribute( 'data-menucraft-chips' );
+			var ids = Array.prototype.map.call(
+				c.querySelectorAll( '.menucraft-chip.menucraft-chip-selected' ),
+				function ( chip ) { return parseInt( chip.getAttribute( 'data-id' ), 10 ); }
+			).filter( function ( n ) { return ! isNaN( n ); } );
+
+			if ( resource === 'categories' ) s.category_ids = ids;
+			else if ( resource === 'tags' ) s.tag_ids = ids;
+			else if ( resource === 'allergens' ) s.allergen_ids = ids;
+		} );
+
+		return s;
+	}
+
+	function updateFilterCount( container, f ) {
+		var badge = container.querySelector( '[data-menucraft-filters-count]' );
+		if ( ! badge ) return;
+		var n = countActiveFilters( f );
+		if ( n === 0 ) {
+			badge.hidden = true;
+			badge.textContent = '';
+			return;
+		}
+		badge.hidden = false;
+		var template = i18n.filtersActive || '%d filter(s) active';
+		badge.textContent = template.replace( '%d', String( n ) );
+	}
+
+	function resetFilters( container ) {
+		var resource = container.getAttribute( 'data-menucraft-filters' );
+
+		Array.prototype.forEach.call(
+			container.querySelectorAll( '[data-menucraft-filter]' ),
+			function ( el ) { el.value = ''; }
+		);
+		Array.prototype.forEach.call(
+			container.querySelectorAll( '[data-menucraft-chips]' ),
+			function ( c ) {
+				Array.prototype.forEach.call(
+					c.querySelectorAll( '.menucraft-chip.menucraft-chip-selected' ),
+					function ( chip ) { chip.classList.remove( 'menucraft-chip-selected' ); }
+				);
+			}
+		);
+
+		filterState[ resource ] = emptyFilterState();
+		updateFilterCount( container, filterState[ resource ] );
+
+		var state = listStates[ resource ];
+		if ( state ) {
+			renderTable( state );
 		}
 	}
 
@@ -650,13 +845,134 @@
 
 	function renderTable( state ) {
 		state.body.innerHTML = '';
+
+		var rows = state.cache;
+		var filters = filterState[ state.resource ];
+		if ( filters && hasActiveFilters( filters ) ) {
+			rows = rows.filter( function ( row ) { return matchesFilters( row, filters ); } );
+		}
+
 		if ( ! state.cache.length ) {
 			state.body.appendChild( buildStatusRow( i18n.empty || 'No entries yet.', state.colspan ) );
+			updateSelectAllCheckbox( state );
 			return;
 		}
-		state.cache.forEach( function ( row ) {
-			state.body.appendChild( state.buildRow( row ) );
+
+		if ( ! rows.length ) {
+			state.body.appendChild( buildStatusRow( i18n.noMatches || 'No matches.', state.colspan ) );
+			updateSelectAllCheckbox( state );
+			return;
+		}
+
+		rows.forEach( function ( row ) {
+			state.body.appendChild( buildRowFor( state, row ) );
 		} );
+		updateSelectAllCheckbox( state );
+	}
+
+	function hasActiveFilters( f ) {
+		return !! (
+			f.search ||
+			( f.category_ids && f.category_ids.length ) ||
+			( f.tag_ids && f.tag_ids.length ) ||
+			( f.allergen_ids && f.allergen_ids.length ) ||
+			f.status ||
+			f.price_min !== null ||
+			f.price_max !== null ||
+			f.image
+		);
+	}
+
+	function countActiveFilters( f ) {
+		var n = 0;
+		if ( f.search ) n++;
+		if ( f.category_ids && f.category_ids.length ) n++;
+		if ( f.tag_ids && f.tag_ids.length ) n++;
+		if ( f.allergen_ids && f.allergen_ids.length ) n++;
+		if ( f.status ) n++;
+		if ( f.price_min !== null || f.price_max !== null ) n++;
+		if ( f.image ) n++;
+		return n;
+	}
+
+	function matchesFilters( item, f ) {
+		if ( f.search ) {
+			var q = f.search.toLowerCase();
+			var hay = ( ( item.name || '' ) + ' ' + ( item.description_short || '' ) + ' ' + ( item.description_long || '' ) ).toLowerCase();
+			if ( hay.indexOf( q ) === -1 ) {
+				return false;
+			}
+		}
+		if ( f.category_ids && f.category_ids.length ) {
+			if ( ! f.category_ids.some( function ( id ) { return ( item.category_ids || [] ).indexOf( id ) > -1; } ) ) {
+				return false;
+			}
+		}
+		if ( f.tag_ids && f.tag_ids.length ) {
+			if ( ! f.tag_ids.some( function ( id ) { return ( item.tag_ids || [] ).indexOf( id ) > -1; } ) ) {
+				return false;
+			}
+		}
+		if ( f.allergen_ids && f.allergen_ids.length ) {
+			if ( ! f.allergen_ids.some( function ( id ) { return ( item.allergen_ids || [] ).indexOf( id ) > -1; } ) ) {
+				return false;
+			}
+		}
+		if ( f.status === 'active' && ! item.is_active ) return false;
+		if ( f.status === 'inactive' && item.is_active ) return false;
+
+		if ( f.price_min !== null || f.price_max !== null ) {
+			var price = itemEffectivePrice( item );
+			if ( price === null ) return false;
+			if ( f.price_min !== null && price < f.price_min ) return false;
+			if ( f.price_max !== null && price > f.price_max ) return false;
+		}
+
+		if ( f.image === 'with' && ! item.media_id ) return false;
+		if ( f.image === 'without' && item.media_id ) return false;
+
+		return true;
+	}
+
+	function itemEffectivePrice( item ) {
+		var variants = ( item.variants || [] ).filter( function ( v ) {
+			var p = typeof v.price === 'number' ? v.price : parseFloat( v.price );
+			return ! isNaN( p );
+		} );
+		if ( variants.length ) {
+			return variants.reduce( function ( min, v ) {
+				var p = typeof v.price === 'number' ? v.price : parseFloat( v.price );
+				return p < min ? p : min;
+			}, Infinity );
+		}
+		if ( item.price !== null && item.price !== undefined && item.price !== '' ) {
+			var base = typeof item.price === 'number' ? item.price : parseFloat( item.price );
+			return isNaN( base ) ? null : base;
+		}
+		return null;
+	}
+
+	/**
+	 * Wrap the resource-specific row with a selection checkbox cell when
+	 * the table opted in via data-menucraft-selectable.
+	 */
+	function buildRowFor( state, entity ) {
+		var tr = state.buildRow( entity );
+		if ( state.selectable ) {
+			var td = document.createElement( 'td' );
+			td.className = 'menucraft-col-select';
+			var cb = document.createElement( 'input' );
+			cb.type = 'checkbox';
+			cb.setAttribute( 'data-menucraft-select-row', String( entity.id ) );
+			cb.setAttribute( 'aria-label', 'Select item ' + entity.id );
+			cb.checked = !! ( selections[ state.resource ] && selections[ state.resource ][ entity.id ] );
+			td.appendChild( cb );
+			tr.insertBefore( td, tr.firstChild );
+			if ( cb.checked ) {
+				tr.classList.add( 'menucraft-row-selected' );
+			}
+		}
+		return tr;
 	}
 
 	function renderStatus( state, text ) {
@@ -1199,41 +1515,284 @@
 
 	function appendRow( state, entity ) {
 		updateCache( state, entity );
-
-		var status = state.body.querySelector( '.menucraft-row-status' );
-		if ( status ) {
-			status.remove();
-		}
-
-		state.body.appendChild( state.buildRow( entity ) );
-
-		// Categories/tags/allergens being added should refresh open chip
-		// containers so newly created relations become selectable.
+		renderTable( state );
 		refreshChipsFor( state.resource );
 	}
 
 	function replaceRow( state, entity ) {
 		updateCache( state, entity );
-
-		var existing = state.body.querySelector( '[data-menucraft-row-id="' + entity.id + '"]' );
-		var fresh    = state.buildRow( entity );
-		if ( existing ) {
-			existing.replaceWith( fresh );
-		} else {
-			state.body.appendChild( fresh );
-		}
+		renderTable( state );
 		refreshChipsFor( state.resource );
 	}
 
 	function removeRow( state, id ) {
-		var existing = state.body.querySelector( '[data-menucraft-row-id="' + id + '"]' );
-		if ( existing ) {
-			existing.remove();
+		removeFromCache( state, id );
+		if ( state.selectable && selections[ state.resource ] ) {
+			delete selections[ state.resource ][ id ];
+			refreshBulkToolbar();
 		}
-		if ( ! state.body.querySelector( 'tr' ) ) {
-			state.body.appendChild( buildStatusRow( i18n.empty || 'No entries yet.', state.colspan ) );
-		}
+		renderTable( state );
 		refreshChipsFor( state.resource );
+	}
+
+	// =============================================== Selection + bulk ==
+
+	function selectableStates() {
+		var out = [];
+		for ( var key in listStates ) {
+			if ( listStates.hasOwnProperty( key ) && listStates[ key ].selectable ) {
+				out.push( listStates[ key ] );
+			}
+		}
+		return out;
+	}
+
+	function selectionCountFor( resource ) {
+		var map = selections[ resource ];
+		if ( ! map ) return 0;
+		var n = 0;
+		for ( var k in map ) { if ( map.hasOwnProperty( k ) && map[ k ] ) n++; }
+		return n;
+	}
+
+	function selectedIdsFor( resource ) {
+		var map = selections[ resource ];
+		if ( ! map ) return [];
+		var ids = [];
+		for ( var k in map ) { if ( map.hasOwnProperty( k ) && map[ k ] ) ids.push( parseInt( k, 10 ) ); }
+		return ids;
+	}
+
+	function updateSelectAllCheckbox( state ) {
+		if ( ! state || ! state.selectable ) {
+			return;
+		}
+		var master = state.table.querySelector( '[data-menucraft-select-all]' );
+		if ( ! master ) return;
+		var boxes = state.body.querySelectorAll( '[data-menucraft-select-row]' );
+		if ( ! boxes.length ) {
+			master.checked       = false;
+			master.indeterminate = false;
+			return;
+		}
+		var all  = true;
+		var some = false;
+		Array.prototype.forEach.call( boxes, function ( b ) {
+			if ( b.checked ) some = true;
+			else all = false;
+		} );
+		master.checked       = all;
+		master.indeterminate = ! all && some;
+	}
+
+	function refreshBulkToolbar() {
+		// Current impl only wires items → single toolbar per plugin.
+		var state = listStates.items;
+		if ( ! state ) return;
+		var toolbar = document.querySelector( '[data-menucraft-bulk-toolbar]' );
+		if ( ! toolbar ) return;
+		var count = selectionCountFor( 'items' );
+		var countEl = toolbar.querySelector( '[data-menucraft-bulk-count]' );
+		if ( countEl ) countEl.textContent = String( count );
+		toolbar.hidden = count === 0;
+	}
+
+	document.addEventListener( 'change', function ( event ) {
+		var master = event.target.closest( '[data-menucraft-select-all]' );
+		if ( master ) {
+			var table = master.closest( '[data-menucraft-list]' );
+			if ( ! table ) return;
+			var resource = table.getAttribute( 'data-menucraft-list' );
+			var state    = listStates[ resource ];
+			if ( ! state ) return;
+			var checked = master.checked;
+			var boxes   = state.body.querySelectorAll( '[data-menucraft-select-row]' );
+			Array.prototype.forEach.call( boxes, function ( b ) {
+				b.checked = checked;
+				var id    = parseInt( b.getAttribute( 'data-menucraft-select-row' ), 10 );
+				if ( isNaN( id ) ) return;
+				if ( checked ) {
+					selections[ resource ][ id ] = true;
+					b.closest( 'tr' ).classList.add( 'menucraft-row-selected' );
+				} else {
+					delete selections[ resource ][ id ];
+					b.closest( 'tr' ).classList.remove( 'menucraft-row-selected' );
+				}
+			} );
+			refreshBulkToolbar();
+			return;
+		}
+
+		var row = event.target.closest( '[data-menucraft-select-row]' );
+		if ( row ) {
+			var table2 = row.closest( '[data-menucraft-list]' );
+			if ( ! table2 ) return;
+			var resource2 = table2.getAttribute( 'data-menucraft-list' );
+			if ( ! selections[ resource2 ] ) return;
+			var id = parseInt( row.getAttribute( 'data-menucraft-select-row' ), 10 );
+			if ( isNaN( id ) ) return;
+			if ( row.checked ) {
+				selections[ resource2 ][ id ] = true;
+				row.closest( 'tr' ).classList.add( 'menucraft-row-selected' );
+			} else {
+				delete selections[ resource2 ][ id ];
+				row.closest( 'tr' ).classList.remove( 'menucraft-row-selected' );
+			}
+			refreshBulkToolbar();
+			updateSelectAllCheckbox( listStates[ resource2 ] );
+		}
+	} );
+
+	document.addEventListener( 'click', function ( event ) {
+		var clearBtn = event.target.closest( '[data-menucraft-bulk-clear]' );
+		if ( clearBtn ) {
+			event.preventDefault();
+			selectableStates().forEach( function ( state ) {
+				selections[ state.resource ] = {};
+				var boxes = state.body.querySelectorAll( '[data-menucraft-select-row]' );
+				Array.prototype.forEach.call( boxes, function ( b ) {
+					b.checked = false;
+					b.closest( 'tr' ).classList.remove( 'menucraft-row-selected' );
+				} );
+				updateSelectAllCheckbox( state );
+			} );
+			refreshBulkToolbar();
+			return;
+		}
+
+		var openBtn = event.target.closest( '[data-menucraft-bulk-open]' );
+		if ( openBtn ) {
+			event.preventDefault();
+			openBulkEditPanel( openBtn.getAttribute( 'data-menucraft-bulk-open' ) );
+		}
+	} );
+
+	function openBulkEditPanel( panelId ) {
+		var count = selectionCountFor( 'items' );
+		if ( count === 0 ) {
+			showToast( i18n.bulkNoSelection || 'Select at least one item first.', 'error' );
+			return;
+		}
+
+		var panel = document.getElementById( panelId );
+		if ( ! panel ) return;
+		var form  = panel.querySelector( '.menucraft-form' );
+		if ( form ) {
+			form.reset();
+			Array.prototype.forEach.call(
+				form.querySelectorAll( '[data-menucraft-chips]' ),
+				function ( container ) { renderChips( container, [] ); }
+			);
+		}
+		var badge = panel.querySelector( '[data-menucraft-bulk-panel-count]' );
+		if ( badge ) badge.textContent = String( count );
+
+		openPanel( panelId );
+	}
+
+	// -------- Bulk submit path (separate from single-item submit) --------
+
+	document.addEventListener( 'submit', function ( event ) {
+		var form = event.target;
+		if ( ! form.hasAttribute || ! form.hasAttribute( 'data-menucraft-bulk-form' ) ) {
+			return;
+		}
+		event.preventDefault();
+		submitBulkForm( form );
+	}, true );
+
+	function submitBulkForm( form ) {
+		var itemIds = selectedIdsFor( 'items' );
+		if ( ! itemIds.length ) {
+			showToast( i18n.bulkNoSelection || 'Select at least one item first.', 'error' );
+			return;
+		}
+
+		var operations = collectBulkOperations( form );
+		if ( ! Object.keys( operations ).length ) {
+			showToast( i18n.bulkNoOps || 'Nothing to apply — pick at least one operation.', 'error' );
+			return;
+		}
+
+		var panel      = form.closest( '.menucraft-offcanvas' );
+		var saveButton = form.querySelector( '[data-menucraft-submit]' );
+		setBusy( saveButton, true );
+
+		rest( 'items/bulk-edit', {
+			method: 'POST',
+			body:   { item_ids: itemIds, operations: operations },
+		} )
+			.then( function ( response ) {
+				var updated = ( response && response.updated ) || [];
+				var state   = listStates.items;
+				if ( state ) {
+					updated.forEach( function ( entity ) { replaceRow( state, entity ); } );
+				}
+
+				var template = i18n.bulkApplied || 'Applied to %d item(s).';
+				showToast( template.replace( '%d', String( updated.length ) ), 'success' );
+
+				// Clear selection after a successful apply.
+				if ( selections.items ) {
+					selections.items = {};
+					var boxes = state.body.querySelectorAll( '[data-menucraft-select-row]' );
+					Array.prototype.forEach.call( boxes, function ( b ) {
+						b.checked = false;
+						b.closest( 'tr' ).classList.remove( 'menucraft-row-selected' );
+					} );
+					refreshBulkToolbar();
+					updateSelectAllCheckbox( state );
+				}
+
+				closePanel( panel );
+			} )
+			.catch( function ( err ) {
+				showToast( err.message || i18n.saveError || 'Save failed.', 'error' );
+			} )
+			.then( function () {
+				setBusy( saveButton, false );
+			} );
+	}
+
+	function collectBulkOperations( form ) {
+		var ops = {};
+
+		var relationSpecs = [
+			{ key: 'categories', mode: 'categories_mode', chips: 'categories' },
+			{ key: 'tags',       mode: 'tags_mode',       chips: 'tags' },
+			{ key: 'allergens',  mode: 'allergens_mode',  chips: 'allergens' },
+		];
+		relationSpecs.forEach( function ( spec ) {
+			var modeEl = form.querySelector( '[name="' + spec.mode + '"]' );
+			var mode   = modeEl ? modeEl.value : '';
+			if ( ! mode ) return;
+			var container = form.querySelector( '[data-menucraft-chips="' + spec.chips + '"]' );
+			var ids       = container ? Array.prototype.map.call(
+				container.querySelectorAll( '.menucraft-chip.menucraft-chip-selected' ),
+				function ( chip ) { return parseInt( chip.getAttribute( 'data-id' ), 10 ); }
+			).filter( function ( n ) { return ! isNaN( n ); } ) : [];
+			ops[ spec.key ] = { mode: mode, ids: ids };
+		} );
+
+		var priceSpecs = [
+			{ key: 'base_price',     mode: 'base_price_mode',     value: 'base_price_value' },
+			{ key: 'variant_prices', mode: 'variant_prices_mode', value: 'variant_prices_value' },
+		];
+		priceSpecs.forEach( function ( spec ) {
+			var modeEl = form.querySelector( '[name="' + spec.mode + '"]' );
+			var mode   = modeEl ? modeEl.value : '';
+			if ( ! mode ) return;
+			var valueEl = form.querySelector( '[name="' + spec.value + '"]' );
+			var value   = valueEl ? parseFloat( valueEl.value ) : 0;
+			ops[ spec.key ] = { mode: mode, value: isNaN( value ) ? 0 : value };
+		} );
+
+		var activeEl = form.querySelector( '[name="is_active_mode"]' );
+		if ( activeEl && activeEl.value !== '' ) {
+			ops.is_active = activeEl.value === '1';
+		}
+
+		return ops;
 	}
 
 	// ======================================== Item variants (sub-panel) ==

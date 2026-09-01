@@ -663,6 +663,18 @@ class MenuCraft_REST {
 
 		register_rest_route(
 			self::REST_NAMESPACE,
+			'/items/bulk-edit',
+			array(
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( __CLASS__, 'bulk_edit_items' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
 			'/items/(?P<id>\d+)',
 			array(
 				array(
@@ -932,6 +944,140 @@ class MenuCraft_REST {
 			),
 			200
 		);
+	}
+
+	/**
+	 * POST /items/bulk-edit — apply the same set of operations to many items.
+	 *
+	 * @param WP_REST_Request $request Raw request (we read body ourselves
+	 *                                 because operations shape is nested and
+	 *                                 does not fit REST args nicely).
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function bulk_edit_items( WP_REST_Request $request ) {
+		$body = $request->get_json_params();
+		if ( ! is_array( $body ) ) {
+			$body = $request->get_body_params();
+		}
+
+		$item_ids   = isset( $body['item_ids'] ) ? (array) $body['item_ids'] : array();
+		$operations = isset( $body['operations'] ) ? (array) $body['operations'] : array();
+
+		$item_ids = array_values( array_unique( array_filter( array_map( 'intval', $item_ids ) ) ) );
+		if ( empty( $item_ids ) ) {
+			return new WP_Error( 'menucraft_no_items', __( 'No items selected.', 'menucraft' ), array( 'status' => 400 ) );
+		}
+
+		$validation = self::validate_bulk_operations( $operations );
+		if ( is_wp_error( $validation ) ) {
+			return $validation;
+		}
+
+		$sanitized = self::sanitize_bulk_operations( $operations );
+
+		$updated = MenuCraft_Item_Repository::bulk_edit( $item_ids, $sanitized );
+		$updated = array_map( array( __CLASS__, 'present' ), $updated );
+
+		return new WP_REST_Response(
+			array(
+				'updated' => $updated,
+				'count'   => count( $updated ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * Validate the operations dictionary before applying.
+	 *
+	 * @param array<string,mixed> $operations Raw ops.
+	 * @return true|WP_Error
+	 */
+	private static function validate_bulk_operations( array $operations ) {
+		$relation_specs = array(
+			'categories' => array( 'MenuCraft_Category_Repository', array( 'replace', 'add', 'remove' ), __( 'Unknown category.', 'menucraft' ) ),
+			'tags'       => array( 'MenuCraft_Tag_Repository', array( 'replace', 'add', 'remove' ), __( 'Unknown tag.', 'menucraft' ) ),
+			'allergens'  => array( 'MenuCraft_Allergen_Repository', array( 'replace', 'add', 'remove' ), __( 'Unknown allergen.', 'menucraft' ) ),
+		);
+
+		foreach ( $relation_specs as $key => $spec ) {
+			if ( empty( $operations[ $key ] ) ) {
+				continue;
+			}
+			$mode = isset( $operations[ $key ]['mode'] ) ? (string) $operations[ $key ]['mode'] : '';
+			if ( ! in_array( $mode, $spec[1], true ) ) {
+				return new WP_Error( 'menucraft_invalid_mode', __( 'Invalid mode for a relation operation.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+			$ids = isset( $operations[ $key ]['ids'] ) ? (array) $operations[ $key ]['ids'] : array();
+			foreach ( $ids as $raw_id ) {
+				$id = (int) $raw_id;
+				if ( $id <= 0 ) {
+					continue;
+				}
+				if ( null === call_user_func( array( $spec[0], 'find' ), $id ) ) {
+					return new WP_Error( 'menucraft_invalid_relation', $spec[2], array( 'status' => 400 ) );
+				}
+			}
+		}
+
+		if ( ! empty( $operations['base_price'] ) ) {
+			$mode = isset( $operations['base_price']['mode'] ) ? (string) $operations['base_price']['mode'] : '';
+			if ( ! in_array( $mode, array( 'replace', 'increase', 'decrease' ), true ) ) {
+				return new WP_Error( 'menucraft_invalid_mode', __( 'Invalid base-price mode.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+		}
+
+		if ( ! empty( $operations['variant_prices'] ) ) {
+			$mode = isset( $operations['variant_prices']['mode'] ) ? (string) $operations['variant_prices']['mode'] : '';
+			if ( ! in_array( $mode, array( 'increase', 'decrease' ), true ) ) {
+				return new WP_Error( 'menucraft_invalid_mode', __( 'Invalid variant-price mode.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Sanitize the operations dictionary — cast IDs to int, prices to
+	 * non-negative float, is_active to bool.
+	 *
+	 * @param array<string,mixed> $operations Raw ops.
+	 * @return array<string,mixed>
+	 */
+	private static function sanitize_bulk_operations( array $operations ) {
+		$clean = array();
+
+		foreach ( array( 'categories', 'tags', 'allergens' ) as $key ) {
+			if ( empty( $operations[ $key ] ) ) {
+				continue;
+			}
+			$clean[ $key ] = array(
+				'mode' => (string) $operations[ $key ]['mode'],
+				'ids'  => array_values( array_unique( array_filter( array_map( 'intval', (array) ( $operations[ $key ]['ids'] ?? array() ) ) ) ) ),
+			);
+		}
+
+		if ( ! empty( $operations['base_price'] ) ) {
+			$value = isset( $operations['base_price']['value'] ) ? (float) $operations['base_price']['value'] : 0.0;
+			$clean['base_price'] = array(
+				'mode'  => (string) $operations['base_price']['mode'],
+				'value' => $value < 0 ? 0.0 : $value,
+			);
+		}
+
+		if ( ! empty( $operations['variant_prices'] ) ) {
+			$value = isset( $operations['variant_prices']['value'] ) ? (float) $operations['variant_prices']['value'] : 0.0;
+			$clean['variant_prices'] = array(
+				'mode'  => (string) $operations['variant_prices']['mode'],
+				'value' => $value < 0 ? 0.0 : $value,
+			);
+		}
+
+		if ( array_key_exists( 'is_active', $operations ) ) {
+			$clean['is_active'] = (bool) $operations['is_active'];
+		}
+
+		return $clean;
 	}
 
 	/**

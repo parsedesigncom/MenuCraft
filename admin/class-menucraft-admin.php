@@ -118,6 +118,11 @@ class MenuCraft_Admin {
 					'variantPrice'    => __( 'Price', 'menucraft' ),
 					'variantRemove'   => __( 'Remove', 'menucraft' ),
 					'variantLabelHint' => __( 'e.g. Small, Medium, Large', 'menucraft' ),
+					'bulkApplied'     => __( 'Applied to %d item(s).', 'menucraft' ),
+					'bulkNoOps'       => __( 'Nothing to apply — pick at least one operation.', 'menucraft' ),
+					'bulkNoSelection' => __( 'Select at least one item first.', 'menucraft' ),
+					'filtersActive'   => __( '%d filter(s) active', 'menucraft' ),
+					'noMatches'       => __( 'No items match the current filters.', 'menucraft' ),
 				),
 			)
 		);

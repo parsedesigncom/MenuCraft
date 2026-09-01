@@ -1,11 +1,9 @@
 <?php
 /**
- * Categories admin screen.
+ * Tags admin screen.
  *
- * Table skeleton is rendered here and populated by JS from the REST
- * endpoint. The off-canvas panel doubles as create and edit surface
- * (mode is toggled by JS via data-menucraft-mode). Delete uses a
- * separate centered modal for confirmation.
+ * Same structure as the Categories screen (tags share the schema);
+ * only the identifiers, labels and REST endpoint differ.
  *
  * @package MenuCraft
  */
@@ -19,24 +17,23 @@ defined( 'ABSPATH' ) || exit;
 				<h1 class="menucraft-page-title"><?php echo esc_html( get_admin_page_title() ); ?></h1>
 				<button type="button"
 					class="button button-primary menucraft-btn-add"
-					data-menucraft-panel-open="menucraft-panel-category-form"
-					data-menucraft-panel-mode-target="menucraft-panel-category-form"
+					data-menucraft-panel-open="menucraft-panel-tag-form"
 					data-menucraft-panel-mode="create">
 					<span class="dashicons dashicons-plus-alt2" aria-hidden="true"></span>
-					<?php esc_html_e( 'New Category', 'menucraft' ); ?>
+					<?php esc_html_e( 'New Tag', 'menucraft' ); ?>
 				</button>
 			</div>
 			<p class="menucraft-page-description">
-				<?php esc_html_e( 'Group menu items into categories such as Coffee, Snacks or Desserts.', 'menucraft' ); ?>
+				<?php esc_html_e( 'Label items with tags such as vegan, halal, gluten-free.', 'menucraft' ); ?>
 			</p>
 			<hr class="menucraft-page-sep">
 		</header>
 
 		<div class="menucraft-page-body">
-			<table class="wp-list-table widefat striped fixed menucraft-table menucraft-categories-table"
-				data-menucraft-list="categories"
-				data-menucraft-panel="menucraft-panel-category-form"
-				data-menucraft-modal-delete="menucraft-modal-delete-category">
+			<table class="wp-list-table widefat striped fixed menucraft-table menucraft-tags-table"
+				data-menucraft-list="tags"
+				data-menucraft-panel="menucraft-panel-tag-form"
+				data-menucraft-modal-delete="menucraft-modal-delete-tag">
 				<thead>
 					<tr>
 						<th scope="col" class="menucraft-col-thumb"><?php esc_html_e( 'Image', 'menucraft' ); ?></th>
@@ -49,7 +46,7 @@ defined( 'ABSPATH' ) || exit;
 					</tr>
 				</thead>
 				<tbody data-menucraft-list-body>
-					<tr class="menucraft-row-status" data-menucraft-list-loading>
+					<tr class="menucraft-row-status">
 						<td colspan="7"><?php esc_html_e( 'Loading…', 'menucraft' ); ?></td>
 					</tr>
 				</tbody>
@@ -61,22 +58,22 @@ defined( 'ABSPATH' ) || exit;
 		</footer>
 	</div>
 
-	<?php // -------- Off-canvas panel: create/edit (mode set via JS) -------- ?>
-	<aside class="menucraft-offcanvas" id="menucraft-panel-category-form" aria-hidden="true">
+	<?php // -------- Off-canvas panel: create/edit -------- ?>
+	<aside class="menucraft-offcanvas" id="menucraft-panel-tag-form" aria-hidden="true">
 		<div class="menucraft-offcanvas-backdrop" data-menucraft-panel-close></div>
 		<div class="menucraft-offcanvas-panel"
 			role="dialog"
 			aria-modal="true"
-			aria-labelledby="menucraft-panel-category-form-title">
+			aria-labelledby="menucraft-panel-tag-form-title">
 			<form class="menucraft-form"
-				data-menucraft-endpoint="categories"
+				data-menucraft-endpoint="tags"
 				data-menucraft-mode="create">
 				<header class="menucraft-offcanvas-header">
 					<h2 class="menucraft-offcanvas-title"
-						id="menucraft-panel-category-form-title"
-						data-menucraft-title-create="<?php esc_attr_e( 'New Category', 'menucraft' ); ?>"
-						data-menucraft-title-edit="<?php esc_attr_e( 'Edit Category', 'menucraft' ); ?>">
-						<?php esc_html_e( 'New Category', 'menucraft' ); ?>
+						id="menucraft-panel-tag-form-title"
+						data-menucraft-title-create="<?php esc_attr_e( 'New Tag', 'menucraft' ); ?>"
+						data-menucraft-title-edit="<?php esc_attr_e( 'Edit Tag', 'menucraft' ); ?>">
+						<?php esc_html_e( 'New Tag', 'menucraft' ); ?>
 					</h2>
 					<button type="button"
 						class="menucraft-offcanvas-close"
@@ -88,21 +85,21 @@ defined( 'ABSPATH' ) || exit;
 
 				<div class="menucraft-offcanvas-body">
 					<div class="menucraft-field">
-						<label for="menucraft-cat-name">
+						<label for="menucraft-tag-name">
 							<?php esc_html_e( 'Name', 'menucraft' ); ?>
 							<span class="menucraft-required" aria-hidden="true">*</span>
 						</label>
-						<input type="text" id="menucraft-cat-name" name="name" required>
+						<input type="text" id="menucraft-tag-name" name="name" required>
 					</div>
 
 					<div class="menucraft-field">
-						<label for="menucraft-cat-description"><?php esc_html_e( 'Description', 'menucraft' ); ?></label>
-						<textarea id="menucraft-cat-description" name="description" rows="4"></textarea>
+						<label for="menucraft-tag-description"><?php esc_html_e( 'Description', 'menucraft' ); ?></label>
+						<textarea id="menucraft-tag-description" name="description" rows="4"></textarea>
 					</div>
 
 					<div class="menucraft-field">
-						<label for="menucraft-cat-color"><?php esc_html_e( 'Color', 'menucraft' ); ?></label>
-						<input type="color" id="menucraft-cat-color" name="color" value="#3858e9">
+						<label for="menucraft-tag-color"><?php esc_html_e( 'Color', 'menucraft' ); ?></label>
+						<input type="color" id="menucraft-tag-color" name="color" value="#3858e9">
 					</div>
 
 					<div class="menucraft-field menucraft-field-media">
@@ -124,21 +121,20 @@ defined( 'ABSPATH' ) || exit;
 					</div>
 
 					<div class="menucraft-field">
-						<label for="menucraft-cat-parent"><?php esc_html_e( 'Parent Category', 'menucraft' ); ?></label>
-						<select id="menucraft-cat-parent" name="parent_id" data-menucraft-parent-select>
+						<label for="menucraft-tag-parent"><?php esc_html_e( 'Parent Tag', 'menucraft' ); ?></label>
+						<select id="menucraft-tag-parent" name="parent_id" data-menucraft-parent-select>
 							<option value=""><?php esc_html_e( '— None —', 'menucraft' ); ?></option>
-							<?php // Options populated by JS from the fetched list. ?>
 						</select>
 					</div>
 
 					<div class="menucraft-field">
-						<label for="menucraft-cat-sort"><?php esc_html_e( 'Sort Order', 'menucraft' ); ?></label>
-						<input type="number" id="menucraft-cat-sort" name="sort_order" value="0" step="1" min="0">
+						<label for="menucraft-tag-sort"><?php esc_html_e( 'Sort Order', 'menucraft' ); ?></label>
+						<input type="number" id="menucraft-tag-sort" name="sort_order" value="0" step="1" min="0">
 					</div>
 
 					<div class="menucraft-field menucraft-field-checkbox">
-						<label for="menucraft-cat-active">
-							<input type="checkbox" id="menucraft-cat-active" name="is_active" value="1" checked>
+						<label for="menucraft-tag-active">
+							<input type="checkbox" id="menucraft-tag-active" name="is_active" value="1" checked>
 							<?php esc_html_e( 'Active', 'menucraft' ); ?>
 						</label>
 					</div>
@@ -151,9 +147,9 @@ defined( 'ABSPATH' ) || exit;
 					<button type="submit"
 						class="button button-primary"
 						data-menucraft-submit
-						data-menucraft-label-create="<?php esc_attr_e( 'Save Category', 'menucraft' ); ?>"
-						data-menucraft-label-edit="<?php esc_attr_e( 'Update Category', 'menucraft' ); ?>">
-						<?php esc_html_e( 'Save Category', 'menucraft' ); ?>
+						data-menucraft-label-create="<?php esc_attr_e( 'Save Tag', 'menucraft' ); ?>"
+						data-menucraft-label-edit="<?php esc_attr_e( 'Update Tag', 'menucraft' ); ?>">
+						<?php esc_html_e( 'Save Tag', 'menucraft' ); ?>
 					</button>
 				</footer>
 			</form>
@@ -161,19 +157,19 @@ defined( 'ABSPATH' ) || exit;
 	</aside>
 
 	<?php // -------- Confirm delete modal -------- ?>
-	<div class="menucraft-modal" id="menucraft-modal-delete-category" aria-hidden="true" role="dialog" aria-modal="true">
+	<div class="menucraft-modal" id="menucraft-modal-delete-tag" aria-hidden="true" role="dialog" aria-modal="true">
 		<div class="menucraft-modal-backdrop" data-menucraft-modal-close></div>
-		<div class="menucraft-modal-dialog" aria-labelledby="menucraft-modal-delete-category-title">
+		<div class="menucraft-modal-dialog" aria-labelledby="menucraft-modal-delete-tag-title">
 			<header class="menucraft-modal-header">
-				<h2 class="menucraft-modal-title" id="menucraft-modal-delete-category-title">
-					<?php esc_html_e( 'Delete category?', 'menucraft' ); ?>
+				<h2 class="menucraft-modal-title" id="menucraft-modal-delete-tag-title">
+					<?php esc_html_e( 'Delete tag?', 'menucraft' ); ?>
 				</h2>
 			</header>
 			<div class="menucraft-modal-body">
 				<p>
 					<?php
 					printf(
-						/* translators: %s: category name placeholder replaced by JS. */
+						/* translators: %s: tag name placeholder replaced by JS. */
 						esc_html__( 'Are you sure you want to delete %s? This cannot be undone.', 'menucraft' ),
 						'<strong data-menucraft-modal-target-name>—</strong>'
 					);

@@ -180,7 +180,7 @@ class MenuCraft_Admin {
 			__( 'Tags', 'menucraft' ),
 			'manage_options',
 			'menucraft-tags',
-			array( $this, 'render_placeholder' )
+			array( $this, 'render_tags_page' )
 		);
 
 		$this->page_hooks[] = add_submenu_page(
@@ -264,6 +264,17 @@ class MenuCraft_Admin {
 		}
 
 		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-categories.php';
+	}
+
+	/**
+	 * Render the Tags admin screen.
+	 */
+	public function render_tags_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-tags.php';
 	}
 
 	/**

@@ -89,13 +89,12 @@ class MenuCraft_Schema {
 			KEY is_active (is_active)
 		) {$charset};";
 
-		// Allergens (code-driven, e.g. EU codes A/B/C).
+		// Allergens (code-driven, e.g. EU codes A/B/C). No image — text/legend only.
 		$statements[] = "CREATE TABLE {$t['allergens']} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			code varchar(20) NOT NULL,
 			name varchar(200) NOT NULL,
 			description text NULL,
-			media_id bigint(20) unsigned NULL,
 			sort_order int(11) NOT NULL DEFAULT 0,
 			is_active tinyint(1) NOT NULL DEFAULT 1,
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -240,14 +239,42 @@ class MenuCraft_Schema {
 	 * Run schema when the persisted db_version is older than MENUCRAFT_DB_VERSION.
 	 *
 	 * Called on admin_init so end-user page loads are not penalized by a version check.
-	 * dbDelta is idempotent, so calling it on existing schema only issues ALTERs when needed.
+	 * dbDelta is idempotent (only ALTERs when needed) but never drops columns, so
+	 * removed columns are handled by explicit migrations in run_migrations().
 	 */
 	public static function maybe_upgrade() {
 		$current = MenuCraft_Options::get( 'db_version', '0' );
 
 		if ( version_compare( $current, MENUCRAFT_DB_VERSION, '<' ) ) {
 			self::create_tables();
+			self::run_migrations( (string) $current );
 			MenuCraft_Options::update( 'db_version', MENUCRAFT_DB_VERSION );
+		}
+	}
+
+	/**
+	 * Apply structural changes that dbDelta cannot do on its own (column drops,
+	 * data backfills, index renames, …). Each block is guarded by version_compare
+	 * so partial upgrades from any older version compose correctly.
+	 *
+	 * @param string $from_version The db_version stored before this upgrade run.
+	 */
+	private static function run_migrations( $from_version ) {
+		global $wpdb;
+		$tables = self::tables();
+
+		if ( version_compare( $from_version, '1.1', '<' ) ) {
+			// Drop the allergens.media_id column — allergens are text/legend only.
+			$allergens = $tables['allergens'];
+			$exists    = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SHOW COLUMNS FROM `{$allergens}` LIKE %s", // phpcs:ignore WordPress.DB
+					'media_id'
+				)
+			);
+			if ( $exists ) {
+				$wpdb->query( "ALTER TABLE `{$allergens}` DROP COLUMN `media_id`" ); // phpcs:ignore WordPress.DB
+			}
 		}
 	}
 }

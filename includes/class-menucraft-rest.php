@@ -51,6 +51,55 @@ class MenuCraft_REST {
 		foreach ( array_keys( self::$term_resources ) as $resource ) {
 			self::register_term_routes( $resource );
 		}
+		self::register_allergen_routes();
+	}
+
+	/**
+	 * Register /allergens routes. Allergens have a different shape
+	 * (code-based, no slug/color/media/parent) so they use dedicated
+	 * handlers rather than the term_resources loop.
+	 */
+	private static function register_allergen_routes() {
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/allergens',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( __CLASS__, 'list_allergens' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( __CLASS__, 'create_allergen' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+					'args'                => self::allergen_args( true ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/allergens/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( __CLASS__, 'get_allergen' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( __CLASS__, 'update_allergen' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+					'args'                => self::allergen_args( false ),
+				),
+				array(
+					'methods'             => WP_REST_Server::DELETABLE,
+					'callback'            => array( __CLASS__, 'delete_allergen' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -417,5 +466,189 @@ class MenuCraft_REST {
 			: null;
 
 		return $entity;
+	}
+
+	// ================================================= Allergen handlers ==
+
+	/**
+	 * Argument schema for allergen create/update.
+	 *
+	 * @param bool $required_fields Set false for updates so partial payloads work.
+	 * @return array<string,array<string,mixed>>
+	 */
+	private static function allergen_args( $required_fields ) {
+		$args = array(
+			'code'        => array(
+				'required'          => (bool) $required_fields,
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'name'        => array(
+				'required'          => (bool) $required_fields,
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'description' => array(
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_textarea_field',
+			),
+			'sort_order'  => array(
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+			),
+			'is_active'   => array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+			),
+		);
+
+		if ( $required_fields ) {
+			$args['description']['default'] = '';
+			$args['sort_order']['default']  = 0;
+			$args['is_active']['default']   = true;
+		}
+
+		return $args;
+	}
+
+	/**
+	 * GET /allergens.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function list_allergens() {
+		$rows = MenuCraft_Allergen_Repository::all();
+		return new WP_REST_Response( $rows, 200 );
+	}
+
+	/**
+	 * GET /allergens/{id}.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function get_allergen( WP_REST_Request $request ) {
+		$entity = MenuCraft_Allergen_Repository::find( (int) $request->get_param( 'id' ) );
+		if ( null === $entity ) {
+			return self::not_found( 'allergen' );
+		}
+		return new WP_REST_Response( $entity, 200 );
+	}
+
+	/**
+	 * POST /allergens.
+	 *
+	 * @param WP_REST_Request $request Sanitized request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function create_allergen( WP_REST_Request $request ) {
+		$code = trim( (string) $request->get_param( 'code' ) );
+		$name = trim( (string) $request->get_param( 'name' ) );
+
+		if ( '' === $code ) {
+			return new WP_Error( 'menucraft_invalid_code', __( 'Code is required.', 'menucraft' ), array( 'status' => 400 ) );
+		}
+		if ( '' === $name ) {
+			return new WP_Error( 'menucraft_invalid_name', __( 'Name is required.', 'menucraft' ), array( 'status' => 400 ) );
+		}
+		if ( MenuCraft_Allergen_Repository::code_exists( $code ) ) {
+			return new WP_Error( 'menucraft_duplicate_code', __( 'This code is already in use.', 'menucraft' ), array( 'status' => 409 ) );
+		}
+
+		$entity = MenuCraft_Allergen_Repository::insert(
+			array(
+				'code'        => $code,
+				'name'        => $name,
+				'description' => (string) $request->get_param( 'description' ),
+				'sort_order'  => (int) $request->get_param( 'sort_order' ),
+				'is_active'   => (bool) $request->get_param( 'is_active' ) ? 1 : 0,
+			)
+		);
+
+		if ( null === $entity ) {
+			return new WP_Error( 'menucraft_insert_failed', __( 'Could not save.', 'menucraft' ), array( 'status' => 500 ) );
+		}
+
+		return new WP_REST_Response( $entity, 201 );
+	}
+
+	/**
+	 * PUT/PATCH /allergens/{id}.
+	 *
+	 * @param WP_REST_Request $request Sanitized request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function update_allergen( WP_REST_Request $request ) {
+		$id       = (int) $request->get_param( 'id' );
+		$existing = MenuCraft_Allergen_Repository::find( $id );
+		if ( null === $existing ) {
+			return self::not_found( 'allergen' );
+		}
+
+		$data = array();
+
+		if ( $request->has_param( 'code' ) ) {
+			$code = trim( (string) $request->get_param( 'code' ) );
+			if ( '' === $code ) {
+				return new WP_Error( 'menucraft_invalid_code', __( 'Code is required.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+			if ( MenuCraft_Allergen_Repository::code_exists( $code, $id ) ) {
+				return new WP_Error( 'menucraft_duplicate_code', __( 'This code is already in use.', 'menucraft' ), array( 'status' => 409 ) );
+			}
+			$data['code'] = $code;
+		}
+
+		if ( $request->has_param( 'name' ) ) {
+			$name = trim( (string) $request->get_param( 'name' ) );
+			if ( '' === $name ) {
+				return new WP_Error( 'menucraft_invalid_name', __( 'Name is required.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+			$data['name'] = $name;
+		}
+
+		foreach ( array( 'description', 'sort_order' ) as $field ) {
+			if ( $request->has_param( $field ) ) {
+				$data[ $field ] = $request->get_param( $field );
+			}
+		}
+
+		if ( $request->has_param( 'is_active' ) ) {
+			$data['is_active'] = (bool) $request->get_param( 'is_active' ) ? 1 : 0;
+		}
+
+		$updated = MenuCraft_Allergen_Repository::update( $id, $data );
+		if ( null === $updated ) {
+			return new WP_Error( 'menucraft_update_failed', __( 'Could not update.', 'menucraft' ), array( 'status' => 500 ) );
+		}
+
+		return new WP_REST_Response( $updated, 200 );
+	}
+
+	/**
+	 * DELETE /allergens/{id}.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function delete_allergen( WP_REST_Request $request ) {
+		$id       = (int) $request->get_param( 'id' );
+		$existing = MenuCraft_Allergen_Repository::find( $id );
+		if ( null === $existing ) {
+			return self::not_found( 'allergen' );
+		}
+
+		$ok = MenuCraft_Allergen_Repository::delete( $id );
+		if ( ! $ok ) {
+			return new WP_Error( 'menucraft_delete_failed', __( 'Could not delete.', 'menucraft' ), array( 'status' => 500 ) );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'deleted'  => true,
+				'id'       => $id,
+				'previous' => $existing,
+			),
+			200
+		);
 	}
 }

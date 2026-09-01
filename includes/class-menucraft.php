@@ -40,6 +40,7 @@ class MenuCraft {
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-slug.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-category-repository.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-tag-repository.php';
+		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-allergen-repository.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-rest.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'admin/class-menucraft-admin.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'public/class-menucraft-public.php';

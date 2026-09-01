@@ -189,7 +189,7 @@ class MenuCraft_Admin {
 			__( 'Allergens', 'menucraft' ),
 			'manage_options',
 			'menucraft-allergens',
-			array( $this, 'render_placeholder' )
+			array( $this, 'render_allergens_page' )
 		);
 
 		$this->page_hooks[] = add_submenu_page(
@@ -275,6 +275,17 @@ class MenuCraft_Admin {
 		}
 
 		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-tags.php';
+	}
+
+	/**
+	 * Render the Allergens admin screen.
+	 */
+	public function render_allergens_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-allergens.php';
 	}
 
 	/**

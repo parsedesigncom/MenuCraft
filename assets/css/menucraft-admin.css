@@ -529,10 +529,25 @@ body.menucraft-offcanvas-open {
 }
 
 .menucraft-col-thumb    { width: 68px;  }
+.menucraft-col-code     { width: 88px;  }
 .menucraft-col-color    { width: 70px;  }
 .menucraft-col-active   { width: 100px; }
 .menucraft-col-dates    { width: 180px; }
 .menucraft-col-actions  { width: 96px;  text-align: right; }
+
+.menucraft-code-badge {
+	background: #eef2ff;
+	border: 1px solid #c7d2fe;
+	border-radius: 4px;
+	color: #3730a3;
+	display: inline-block;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1;
+	padding: 5px 8px;
+	text-transform: uppercase;
+}
 
 .menucraft-row-status td {
 	color: #646970;

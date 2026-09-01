@@ -429,6 +429,7 @@
 		form.setAttribute( 'data-menucraft-mode', 'edit' );
 		form.setAttribute( 'data-menucraft-id', String( entity.id ) );
 
+		setFieldValue( form, 'code', entity.code || '' );
 		setFieldValue( form, 'name', entity.name || '' );
 		setFieldValue( form, 'description', entity.description || '' );
 		setFieldValue( form, 'color', entity.color || '#3858e9' );
@@ -467,6 +468,15 @@
 
 	// =========================================== Lists (multi-resource) ==
 
+	// Per-resource rendering config. New shape-compatible resources add an
+	// entry here; row layouts diverge (e.g. allergens have no thumbnail/color)
+	// via dedicated build functions.
+	var listConfigs = {
+		categories: { buildRow: buildTermRow,     colspan: 7 },
+		tags:       { buildRow: buildTermRow,     colspan: 7 },
+		allergens:  { buildRow: buildAllergenRow, colspan: 6 },
+	};
+
 	function initLists() {
 		var tables = document.querySelectorAll( '[data-menucraft-list]' );
 		Array.prototype.forEach.call( tables, function ( table ) {
@@ -475,6 +485,7 @@
 			if ( ! resource || ! body ) {
 				return;
 			}
+			var config = listConfigs[ resource ] || { buildRow: buildTermRow, colspan: 7 };
 			listStates[ resource ] = {
 				resource:      resource,
 				table:         table,
@@ -482,6 +493,8 @@
 				cache:         [],
 				panelId:       table.getAttribute( 'data-menucraft-panel' ) || '',
 				deleteModalId: table.getAttribute( 'data-menucraft-modal-delete' ) || '',
+				buildRow:      config.buildRow,
+				colspan:       config.colspan,
 			};
 			fetchList( listStates[ resource ] );
 		} );
@@ -503,30 +516,30 @@
 	function renderTable( state ) {
 		state.body.innerHTML = '';
 		if ( ! state.cache.length ) {
-			state.body.appendChild( buildStatusRow( i18n.empty || 'No entries yet.' ) );
+			state.body.appendChild( buildStatusRow( i18n.empty || 'No entries yet.', state.colspan ) );
 			return;
 		}
 		state.cache.forEach( function ( row ) {
-			state.body.appendChild( buildRow( row ) );
+			state.body.appendChild( state.buildRow( row ) );
 		} );
 	}
 
 	function renderStatus( state, text ) {
 		state.body.innerHTML = '';
-		state.body.appendChild( buildStatusRow( text ) );
+		state.body.appendChild( buildStatusRow( text, state.colspan ) );
 	}
 
-	function buildStatusRow( text ) {
+	function buildStatusRow( text, colspan ) {
 		var tr = document.createElement( 'tr' );
 		tr.className = 'menucraft-row-status';
 		var td = document.createElement( 'td' );
-		td.colSpan     = 7;
+		td.colSpan     = colspan || 7;
 		td.textContent = text;
 		tr.appendChild( td );
 		return tr;
 	}
 
-	function buildRow( entity ) {
+	function buildTermRow( entity ) {
 		var tr = document.createElement( 'tr' );
 		tr.setAttribute( 'data-menucraft-row-id', String( entity.id ) );
 
@@ -861,7 +874,7 @@
 			status.remove();
 		}
 
-		state.body.appendChild( buildRow( entity ) );
+		state.body.appendChild( state.buildRow( entity ) );
 		refreshParentDropdown( state );
 	}
 
@@ -869,7 +882,7 @@
 		updateCache( state, entity );
 
 		var existing = state.body.querySelector( '[data-menucraft-row-id="' + entity.id + '"]' );
-		var fresh    = buildRow( entity );
+		var fresh    = state.buildRow( entity );
 		if ( existing ) {
 			existing.replaceWith( fresh );
 		} else {
@@ -884,8 +897,61 @@
 			existing.remove();
 		}
 		if ( ! state.body.querySelector( 'tr' ) ) {
-			state.body.appendChild( buildStatusRow( i18n.empty || 'No entries yet.' ) );
+			state.body.appendChild( buildStatusRow( i18n.empty || 'No entries yet.', state.colspan ) );
 		}
+	}
+
+	// -------- Allergen row (leaner: code / name / desc / active / dates / actions) --
+
+	function buildAllergenRow( entity ) {
+		var tr = document.createElement( 'tr' );
+		tr.setAttribute( 'data-menucraft-row-id', String( entity.id ) );
+
+		// Code (styled badge).
+		var tdCode = document.createElement( 'td' );
+		tdCode.className = 'menucraft-col-code';
+		var codeBadge    = document.createElement( 'span' );
+		codeBadge.className   = 'menucraft-code-badge';
+		codeBadge.textContent = entity.code || '—';
+		tdCode.appendChild( codeBadge );
+		tr.appendChild( tdCode );
+
+		// Name.
+		var tdName = document.createElement( 'td' );
+		tdName.className = 'menucraft-col-name';
+		var nameStrong   = document.createElement( 'strong' );
+		nameStrong.textContent = entity.name;
+		tdName.appendChild( nameStrong );
+		tr.appendChild( tdName );
+
+		// Description (truncated).
+		var tdDesc = document.createElement( 'td' );
+		tdDesc.className   = 'menucraft-col-desc';
+		tdDesc.textContent = truncate( entity.description || '', 15 );
+		if ( entity.description ) {
+			tdDesc.title = entity.description;
+		}
+		tr.appendChild( tdDesc );
+
+		// Active toggle.
+		var tdActive = document.createElement( 'td' );
+		tdActive.className = 'menucraft-col-active';
+		tdActive.appendChild( buildActiveToggle( entity ) );
+		tr.appendChild( tdActive );
+
+		// Dates.
+		var tdDates = document.createElement( 'td' );
+		tdDates.className = 'menucraft-col-dates';
+		tdDates.appendChild( buildDatesCell( entity ) );
+		tr.appendChild( tdDates );
+
+		// Actions.
+		var tdActions = document.createElement( 'td' );
+		tdActions.className = 'menucraft-col-actions';
+		tdActions.appendChild( buildActionsCell( entity ) );
+		tr.appendChild( tdActions );
+
+		return tr;
 	}
 
 	// =========================================================== Toast ==

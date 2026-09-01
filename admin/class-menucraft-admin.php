@@ -52,7 +52,12 @@ class MenuCraft_Admin {
 	}
 
 	/**
-	 * Register the top-level admin menu. Submenu items will be added later.
+	 * Register the top-level admin menu and its child screens.
+	 *
+	 * The first submenu re-uses the parent slug to override the label that
+	 * WordPress would otherwise auto-generate ("MenuCraft" → "Dashboard").
+	 * All child screens render a shared placeholder view until their real
+	 * UI is built.
 	 */
 	public function register_admin_menu() {
 		add_menu_page(
@@ -63,10 +68,73 @@ class MenuCraft_Admin {
 			array( $this, 'render_admin_page' ),
 			'dashicons-coffee'
 		);
+
+		add_submenu_page(
+			'menucraft',
+			__( 'MenuCraft Dashboard', 'menucraft' ),
+			__( 'Dashboard', 'menucraft' ),
+			'manage_options',
+			'menucraft',
+			array( $this, 'render_admin_page' )
+		);
+
+		add_submenu_page(
+			'menucraft',
+			__( 'Items', 'menucraft' ),
+			__( 'Items', 'menucraft' ),
+			'manage_options',
+			'menucraft-items',
+			array( $this, 'render_placeholder' )
+		);
+
+		add_submenu_page(
+			'menucraft',
+			__( 'Categories', 'menucraft' ),
+			__( 'Categories', 'menucraft' ),
+			'manage_options',
+			'menucraft-categories',
+			array( $this, 'render_placeholder' )
+		);
+
+		add_submenu_page(
+			'menucraft',
+			__( 'Tags', 'menucraft' ),
+			__( 'Tags', 'menucraft' ),
+			'manage_options',
+			'menucraft-tags',
+			array( $this, 'render_placeholder' )
+		);
+
+		add_submenu_page(
+			'menucraft',
+			__( 'Allergens', 'menucraft' ),
+			__( 'Allergens', 'menucraft' ),
+			'manage_options',
+			'menucraft-allergens',
+			array( $this, 'render_placeholder' )
+		);
+
+		add_submenu_page(
+			'menucraft',
+			__( 'Offers', 'menucraft' ),
+			__( 'Offers', 'menucraft' ),
+			'manage_options',
+			'menucraft-offers',
+			array( $this, 'render_placeholder' )
+		);
+
+		add_submenu_page(
+			'menucraft',
+			__( 'Options', 'menucraft' ),
+			__( 'Options', 'menucraft' ),
+			'manage_options',
+			'menucraft-options',
+			array( $this, 'render_placeholder' )
+		);
 	}
 
 	/**
-	 * Render the main plugin admin page.
+	 * Render the MenuCraft dashboard (parent-menu page).
 	 */
 	public function render_admin_page() {
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -74,5 +142,16 @@ class MenuCraft_Admin {
 		}
 
 		require_once MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-display.php';
+	}
+
+	/**
+	 * Render a shared placeholder screen for submenus without a real UI yet.
+	 */
+	public function render_placeholder() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-placeholder.php';
 	}
 }

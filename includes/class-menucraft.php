@@ -35,6 +35,8 @@ class MenuCraft {
 	private function load_dependencies() {
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-loader.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-i18n.php';
+		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-schema.php';
+		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-options.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'admin/class-menucraft-admin.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'public/class-menucraft-public.php';
 
@@ -54,8 +56,8 @@ class MenuCraft {
 	 */
 	private function define_admin_hooks() {
 		$admin = new MenuCraft_Admin( MENUCRAFT_TEXT_DOMAIN, MENUCRAFT_VERSION );
-		// Hooks will be registered here in future iterations.
-		unset( $admin );
+		$this->loader->add_action( 'admin_menu', $admin, 'register_admin_menu' );
+		$this->loader->add_action( 'admin_init', 'MenuCraft_Schema', 'maybe_upgrade' );
 	}
 
 	/**

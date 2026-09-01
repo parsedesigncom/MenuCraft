@@ -50,4 +50,29 @@ class MenuCraft_Admin {
 	public function enqueue_scripts() {
 		// Scripts will be enqueued here in future iterations.
 	}
+
+	/**
+	 * Register the top-level admin menu. Submenu items will be added later.
+	 */
+	public function register_admin_menu() {
+		add_menu_page(
+			__( 'MenuCraft', 'menucraft' ),
+			__( 'MenuCraft', 'menucraft' ),
+			'manage_options',
+			'menucraft',
+			array( $this, 'render_admin_page' ),
+			'dashicons-coffee'
+		);
+	}
+
+	/**
+	 * Render the main plugin admin page.
+	 */
+	public function render_admin_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		require_once MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-display.php';
+	}
 }

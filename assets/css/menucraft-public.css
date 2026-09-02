@@ -413,6 +413,28 @@
 	margin-right: 2px;
 }
 
+/* ============================================================= Block-only utilities
+ * The following classes are set by the Gutenberg block wrapper. They do
+ * nothing when the shortcode is used directly; they scale the whole
+ * menu (font-size cascades via em) and align filter / item content.
+ */
+
+.menucraft-scale-s { font-size: 0.85em; }
+.menucraft-scale-m { font-size: 1em; }
+.menucraft-scale-l { font-size: 1.2em; }
+
+.menucraft-filter-align-center .menucraft-filter-group { justify-content: center; }
+.menucraft-filter-align-right  .menucraft-filter-group { justify-content: flex-end; }
+
+.menucraft-filter-align-center .menucraft-filter-chips { justify-content: center; }
+.menucraft-filter-align-right  .menucraft-filter-chips { justify-content: flex-end; }
+
+.menucraft-content-align-center .menucraft-item-body { text-align: center; }
+.menucraft-content-align-right  .menucraft-item-body { text-align: right; }
+
+.menucraft-content-align-center .menucraft-item-head { justify-content: center; }
+.menucraft-content-align-right  .menucraft-item-head { justify-content: flex-end; }
+
 body.menucraft-modal-lock {
 	overflow: hidden;
 }

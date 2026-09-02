@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Plugin constants.
  */
-define( 'MENUCRAFT_VERSION', '0.1.0' );
+define( 'MENUCRAFT_VERSION', '0.1.1' );
 define( 'MENUCRAFT_DB_VERSION', '1.4' );
 define( 'MENUCRAFT_PLUGIN_FILE', __FILE__ );
 define( 'MENUCRAFT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );

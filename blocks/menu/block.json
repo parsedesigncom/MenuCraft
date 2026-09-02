@@ -27,7 +27,43 @@
 			"type": "string",
 			"default": "show",
 			"enum": [ "show", "hide" ]
-		}
+		},
+		"fontScale": {
+			"type": "string",
+			"default": "medium",
+			"enum": [ "small", "medium", "large" ]
+		},
+		"filterAlign": {
+			"type": "string",
+			"default": "left",
+			"enum": [ "left", "center", "right" ]
+		},
+		"itemAlign": {
+			"type": "string",
+			"default": "left",
+			"enum": [ "left", "center", "right" ]
+		},
+		"borderRadius": { "type": "string", "default": "" },
+		"bgColor":              { "type": "string", "default": "" },
+		"textColor":            { "type": "string", "default": "" },
+		"filterBarBg":          { "type": "string", "default": "" },
+		"filterLabelColor":     { "type": "string", "default": "" },
+		"chipBg":               { "type": "string", "default": "" },
+		"chipText":             { "type": "string", "default": "" },
+		"chipBorder":           { "type": "string", "default": "" },
+		"chipActiveBg":         { "type": "string", "default": "" },
+		"chipActiveText":       { "type": "string", "default": "" },
+		"itemBg":               { "type": "string", "default": "" },
+		"itemBorder":           { "type": "string", "default": "" },
+		"itemTitleColor":       { "type": "string", "default": "" },
+		"itemDescColor":        { "type": "string", "default": "" },
+		"itemPriceColor":       { "type": "string", "default": "" },
+		"allergenSupColor":     { "type": "string", "default": "" },
+		"variantDividerColor":  { "type": "string", "default": "" },
+		"tagBorder":            { "type": "string", "default": "" },
+		"tagText":              { "type": "string", "default": "" },
+		"legendBg":             { "type": "string", "default": "" },
+		"legendText":           { "type": "string", "default": "" }
 	},
 	"supports": {
 		"className": true,

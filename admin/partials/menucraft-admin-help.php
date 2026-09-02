@@ -154,9 +154,35 @@ defined( 'ABSPATH' ) || exit;
 						</ul>
 						<p><?php esc_html_e( 'For an extra CSS class, use the standard "Advanced" section at the bottom of the sidebar.', 'menucraft' ); ?></p>
 
-						<h3><?php esc_html_e( 'Same as the shortcode', 'menucraft' ); ?></h3>
-						<p><?php esc_html_e( 'The block uses the shortcode under the hood.', 'menucraft' ); ?></p>
-						<p><?php esc_html_e( 'Frontend output is identical, so you can mix and match:', 'menucraft' ); ?></p>
+						<h3><?php esc_html_e( 'Block-only styling', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'The block has extra options that are not available in the shortcode.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'These live in the sidebar on the right when the block is selected.', 'menucraft' ); ?></p>
+
+						<h4><?php esc_html_e( 'Font size', 'menucraft' ); ?></h4>
+						<p><?php esc_html_e( 'Choose Small, Medium or Large.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'This scales the whole menu at once — text, chips, prices, everything.', 'menucraft' ); ?></p>
+
+						<h4><?php esc_html_e( 'Alignment', 'menucraft' ); ?></h4>
+						<p><?php esc_html_e( 'Two separate settings:', 'menucraft' ); ?></p>
+						<ul>
+							<li><?php esc_html_e( 'Filter alignment: pushes the filter chips to left, center or right.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Item content alignment: aligns the text inside each item card.', 'menucraft' ); ?></li>
+						</ul>
+
+						<h4><?php esc_html_e( 'Border radius', 'menucraft' ); ?></h4>
+						<p><?php esc_html_e( 'One slider for the whole block.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'The value in pixels is applied everywhere: container, filter, items, image and tag pills.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Leave empty (reset button) to keep the default rounded shapes.', 'menucraft' ); ?></p>
+
+						<h4><?php esc_html_e( 'Colors', 'menucraft' ); ?></h4>
+						<p><?php esc_html_e( 'The sidebar has separate color panels for the different parts of the menu.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Container, filter, items, tags, allergen legend — each has its own colors.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Any color you leave empty keeps its default.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'The color picker also shows your theme colors, so you can match the site look with one click.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Same content as the shortcode', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'The block uses the shortcode under the hood for the actual menu.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'You can mix and match:', 'menucraft' ); ?></p>
 						<p><?php esc_html_e( 'Use the block for easy visual editing, and the shortcode when you edit content in code or via a page builder that only accepts shortcodes.', 'menucraft' ); ?></p>
 
 					</div>

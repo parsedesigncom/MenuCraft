@@ -255,7 +255,11 @@
 
 .menucraft-item-allergens {
 	color: rgba( 0, 0, 0, 0.6 );
-	font-size: 0.85em;
+	font-size: 0.5em;
+	font-style: italic;
+	font-weight: 400;
+	margin-left: 4px;
+	vertical-align: super;
 }
 
 .menucraft-item-tags {
@@ -375,6 +379,38 @@
 .menucraft-modal-variant-price {
 	font-weight: 600;
 	white-space: nowrap;
+}
+
+/* ============================================================= Allergen legend */
+
+.menucraft-allergens-legend {
+	color: rgba( 0, 0, 0, 0.55 );
+	font-size: 0.8em;
+	line-height: 1.5;
+	margin-top: 20px;
+	padding-top: 12px;
+	border-top: 1px solid rgba( 0, 0, 0, 0.08 );
+}
+
+.menucraft-allergens-legend-label {
+	font-weight: 600;
+	margin-right: 4px;
+}
+
+.menucraft-allergens-legend-item {
+	display: inline;
+	white-space: nowrap;
+}
+
+.menucraft-allergens-legend-item + .menucraft-allergens-legend-item::before {
+	content: " · ";
+	opacity: 0.6;
+	white-space: normal;
+}
+
+.menucraft-allergens-legend-item strong {
+	font-weight: 700;
+	margin-right: 2px;
 }
 
 body.menucraft-modal-lock {

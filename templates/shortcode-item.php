@@ -81,10 +81,28 @@ if ( $show_variants_modal ) {
 	$modal_html .= '</ul>';
 }
 
+// Allergen codes rendered inside the title as a small italic
+// superscript prefix (see .menucraft-item-allergens CSS).
+$allergen_prefix = '';
+if ( ! empty( $item_all_ids ) ) {
+	$codes = array();
+	foreach ( $item_all_ids as $aid ) {
+		if ( isset( $allergens[ $aid ] ) ) {
+			$codes[] = $allergens[ $aid ]['code'];
+		}
+	}
+	if ( ! empty( $codes ) ) {
+		$allergen_prefix = '<span class="menucraft-item-allergens" aria-label="'
+			. esc_attr__( 'Allergens', 'menucraft' ) . '">'
+			. esc_html( implode( ', ', $codes ) )
+			. '</span>';
+	}
+}
+
 $body_html  = '';
 $body_html .= '<div class="menucraft-item-body">';
 $body_html .= '<header class="menucraft-item-head">';
-$body_html .= '<h3 class="menucraft-item-title">' . esc_html( $item['name'] ) . '</h3>';
+$body_html .= '<h3 class="menucraft-item-title">' . esc_html( $item['name'] ) . $allergen_prefix . '</h3>';
 if ( $show_price_header ) {
 	$body_html .= '<span class="menucraft-item-price">';
 	if ( '' !== $price_hint ) {
@@ -110,34 +128,20 @@ if ( $show_variants_inline ) {
 	$body_html .= '</ul>';
 }
 
-if ( ! empty( $item_tag_ids ) || ! empty( $item_all_ids ) ) {
-	$body_html .= '<footer class="menucraft-item-meta">';
-	if ( ! empty( $item_all_ids ) ) {
-		$codes = array();
-		foreach ( $item_all_ids as $aid ) {
-			if ( isset( $allergens[ $aid ] ) ) {
-				$codes[] = $allergens[ $aid ]['code'];
-			}
+if ( ! empty( $item_tag_ids ) ) {
+	$rendered_tags = '';
+	foreach ( $item_tag_ids as $tid ) {
+		if ( ! isset( $tags[ $tid ] ) ) {
+			continue;
 		}
-		if ( ! empty( $codes ) ) {
-			$body_html .= '<span class="menucraft-item-allergens">'
-				. esc_html__( 'Allergens:', 'menucraft' ) . ' '
-				. esc_html( implode( ', ', $codes ) )
-				. '</span>';
-		}
+		$style          = ! empty( $tags[ $tid ]['color'] ) ? ' style="border-color:' . esc_attr( $tags[ $tid ]['color'] ) . '"' : '';
+		$rendered_tags .= '<span class="menucraft-item-tag"' . $style . '>' . esc_html( $tags[ $tid ]['name'] ) . '</span>';
 	}
-	if ( ! empty( $item_tag_ids ) ) {
-		$body_html .= '<span class="menucraft-item-tags">';
-		foreach ( $item_tag_ids as $tid ) {
-			if ( ! isset( $tags[ $tid ] ) ) {
-				continue;
-			}
-			$style = ! empty( $tags[ $tid ]['color'] ) ? ' style="border-color:' . esc_attr( $tags[ $tid ]['color'] ) . '"' : '';
-			$body_html .= '<span class="menucraft-item-tag"' . $style . '>' . esc_html( $tags[ $tid ]['name'] ) . '</span>';
-		}
-		$body_html .= '</span>';
+	if ( '' !== $rendered_tags ) {
+		$body_html .= '<footer class="menucraft-item-meta">';
+		$body_html .= '<span class="menucraft-item-tags">' . $rendered_tags . '</span>';
+		$body_html .= '</footer>';
 	}
-	$body_html .= '</footer>';
 }
 $body_html .= '</div>';
 

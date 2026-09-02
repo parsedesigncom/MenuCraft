@@ -99,6 +99,15 @@ defined( 'ABSPATH' ) || exit;
 						<p><?php esc_html_e( 'Example:', 'menucraft' ); ?></p>
 						<pre class="menucraft-help-code">[menucraft class="my-menu"]</pre>
 
+						<h4><code>allergens_legend</code></h4>
+						<p><?php esc_html_e( 'A small allergen list is printed at the end of the menu.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'It explains what each code letter means.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Possible values:', 'menucraft' ); ?> <code>show</code>, <code>hide</code></p>
+						<p><?php esc_html_e( 'Default:', 'menucraft' ); ?> <code>show</code></p>
+						<p><?php esc_html_e( 'Use', 'menucraft' ); ?> <code>hide</code> <?php esc_html_e( 'if you do not want the list.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Example:', 'menucraft' ); ?></p>
+						<pre class="menucraft-help-code">[menucraft allergens_legend="hide"]</pre>
+
 						<h3><?php esc_html_e( 'Combine attributes', 'menucraft' ); ?></h3>
 						<p><?php esc_html_e( 'You can use several attributes together, in any order.', 'menucraft' ); ?></p>
 						<p><?php esc_html_e( 'Example:', 'menucraft' ); ?></p>

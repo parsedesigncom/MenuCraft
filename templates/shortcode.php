@@ -126,6 +126,52 @@ $items_override   = apply_filters( 'menucraft_shortcode_items_html', '', $items 
 		<?php do_action( 'menucraft_after_items', $items ); ?>
 	<?php endif; ?>
 
+	<?php
+	// ---------- Allergens legend (fine-print list at end of menu) ----------
+	if ( ! empty( $config['show_allergens_legend'] ) && ! empty( $allergens ) ) :
+		/**
+		 * Filter: replace the allergens-legend HTML entirely.
+		 * Return '' to keep the built-in output.
+		 *
+		 * @param string $html      Empty by default.
+		 * @param array  $allergens Allergen rows keyed by id.
+		 */
+		$legend_override = apply_filters( 'menucraft_shortcode_allergens_legend_html', '', $allergens );
+
+		if ( is_string( $legend_override ) && '' !== $legend_override ) {
+			echo $legend_override; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		} else {
+			/**
+			 * Action: right before the allergens legend.
+			 *
+			 * @param array $allergens
+			 */
+			do_action( 'menucraft_before_allergens_legend', $allergens );
+			?>
+			<div class="menucraft-allergens-legend" data-menucraft-allergens-legend>
+				<span class="menucraft-allergens-legend-label">
+					<?php echo esc_html( $titles['allergens'] ); ?>:
+				</span>
+				<span class="menucraft-allergens-legend-list">
+					<?php foreach ( $allergens as $allergen ) : ?>
+						<span class="menucraft-allergens-legend-item">
+							<strong><?php echo esc_html( $allergen['code'] ); ?></strong>
+							<?php echo esc_html( $allergen['name'] ); ?>
+						</span>
+					<?php endforeach; ?>
+				</span>
+			</div>
+			<?php
+			/**
+			 * Action: right after the allergens legend.
+			 *
+			 * @param array $allergens
+			 */
+			do_action( 'menucraft_after_allergens_legend', $allergens );
+		}
+	endif;
+	?>
+
 	<?php // ---- Long-description / variants modal shell (populated by JS) ---- ?>
 	<div class="menucraft-modal"
 		id="<?php echo esc_attr( $instance_id ); ?>-modal"

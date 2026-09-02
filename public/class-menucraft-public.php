@@ -125,6 +125,8 @@ class MenuCraft_Public {
 	 *                              CSS without touching the plugin. Multiple
 	 *                              classes may be space-separated; each is
 	 *                              sanitized with sanitize_html_class().
+	 *   allergens_legend=show|hide Show or hide the small allergen legend
+	 *                              printed after the items list. Default: show.
 	 *
 	 * @param array<string,mixed>|string $atts    Raw shortcode attributes.
 	 * @param string|null                $content Enclosed content (unused for now).
@@ -142,6 +144,7 @@ class MenuCraft_Public {
 				'allergens_title'  => '',
 				'columns'          => '',
 				'class'            => '',
+				'allergens_legend' => 'show',
 			),
 			is_array( $atts ) ? $atts : array(),
 			'menucraft'
@@ -252,14 +255,17 @@ class MenuCraft_Public {
 			$custom_class = implode( ' ', array_keys( $clean ) );
 		}
 
+		$show_legend = 'hide' !== strtolower( (string) $atts['allergens_legend'] );
+
 		return array(
-			'instance_id'   => $instance_id,
-			'image_pos'     => $image_pos,
-			'variants_mode' => $variants_mode,
-			'titles'        => $titles,
-			'grid_enabled'  => ! empty( $breakpoints ),
-			'grid_css'      => $grid_css,
-			'custom_class'  => $custom_class,
+			'instance_id'          => $instance_id,
+			'image_pos'            => $image_pos,
+			'variants_mode'        => $variants_mode,
+			'titles'               => $titles,
+			'grid_enabled'         => ! empty( $breakpoints ),
+			'grid_css'             => $grid_css,
+			'custom_class'         => $custom_class,
+			'show_allergens_legend' => $show_legend,
 		);
 	}
 

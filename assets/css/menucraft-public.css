@@ -1,0 +1,403 @@
+/*
+ * MenuCraft — public / front-end styles.
+ *
+ * Single file per WP.org "keep asset count low" guidance. All selectors
+ * are scoped under `.menucraft` so we don't leak into theme markup.
+ */
+
+.menucraft {
+	color: inherit;
+	font-family: inherit;
+	line-height: 1.5;
+	margin: 0 0 24px;
+}
+
+.menucraft *,
+.menucraft *::before,
+.menucraft *::after {
+	box-sizing: border-box;
+}
+
+/* ============================================================= Filter bar */
+
+.menucraft-filter-bar {
+	background: rgba( 0, 0, 0, 0.02 );
+	border: 1px solid rgba( 0, 0, 0, 0.08 );
+	border-radius: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: 20px;
+	padding: 12px 14px;
+}
+
+.menucraft-filter-group {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.menucraft-filter-label {
+	font-size: 0.85em;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	margin-right: 4px;
+	opacity: 0.7;
+	text-transform: uppercase;
+}
+
+.menucraft-filter-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.menucraft-filter-chip {
+	background: #ffffff;
+	border: 1px solid rgba( 0, 0, 0, 0.15 );
+	border-radius: 999px;
+	color: inherit;
+	cursor: pointer;
+	font: inherit;
+	font-size: 0.9em;
+	line-height: 1.2;
+	padding: 5px 12px;
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.menucraft-filter-chip:hover,
+.menucraft-filter-chip:focus-visible {
+	border-color: rgba( 0, 0, 0, 0.35 );
+	outline: none;
+}
+
+.menucraft-filter-chip.is-active {
+	background: #1d2327;
+	border-color: #1d2327;
+	color: #ffffff;
+}
+
+/* ============================================================= Items list */
+
+.menucraft-items {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.menucraft-empty {
+	color: rgba( 0, 0, 0, 0.6 );
+	font-style: italic;
+	margin: 0;
+	padding: 24px;
+	text-align: center;
+}
+
+.menucraft-item {
+	background: #ffffff;
+	border: 1px solid rgba( 0, 0, 0, 0.08 );
+	border-radius: 8px;
+	display: grid;
+	gap: 14px;
+	grid-template-columns: 120px 1fr;
+	padding: 14px;
+	transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.menucraft-item--image-right {
+	grid-template-columns: 1fr 120px;
+}
+
+.menucraft-item--image-top {
+	grid-template-columns: 1fr;
+}
+
+.menucraft-item--image-top .menucraft-item-media img {
+	max-height: 220px;
+	object-fit: cover;
+	width: 100%;
+}
+
+.menucraft-item:not(:has(.menucraft-item-media)) {
+	grid-template-columns: 1fr;
+}
+
+/* Grid layout (opt-in via `columns` arg). The `menucraft-items` container
+ * gets `display:grid` from the shortcode's inline <style>; nothing here to
+ * override except: reset the items-list flex direction so the grid can
+ * take over. */
+
+.menucraft-menu--grid .menucraft-items {
+	display: grid;
+	gap: 16px;
+}
+
+.menucraft-menu--grid .menucraft-item {
+	height: 100%;
+}
+
+.menucraft-item.menucraft-item-has-details {
+	cursor: pointer;
+}
+
+.menucraft-item.menucraft-item-has-details:hover,
+.menucraft-item.menucraft-item-has-details:focus-visible {
+	border-color: rgba( 0, 0, 0, 0.2 );
+	box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.06 );
+	outline: none;
+}
+
+.menucraft-item[hidden] {
+	display: none !important;
+}
+
+/* Image column */
+
+.menucraft-item-media {
+	align-items: flex-start;
+	display: flex;
+	justify-content: center;
+}
+
+.menucraft-item-media img {
+	border-radius: 6px;
+	display: block;
+	height: auto;
+	max-width: 100%;
+	object-fit: cover;
+	width: 120px;
+}
+
+/* Body column */
+
+.menucraft-item-body {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+
+.menucraft-item-head {
+	align-items: baseline;
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+}
+
+.menucraft-item-title {
+	font-size: 1.05em;
+	font-weight: 700;
+	line-height: 1.3;
+	margin: 0;
+}
+
+.menucraft-item-price {
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.menucraft-item-price-hint {
+	color: rgba( 0, 0, 0, 0.5 );
+	font-size: 0.85em;
+	font-weight: 400;
+	margin-right: 2px;
+}
+
+.menucraft-item-desc {
+	color: rgba( 0, 0, 0, 0.72 );
+	font-size: 0.95em;
+	margin: 0;
+}
+
+/* Variants — inline list, no separate rows */
+
+.menucraft-item-variants {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	list-style: none;
+	margin: 4px 0 0;
+	padding: 0;
+}
+
+.menucraft-item-variant {
+	align-items: baseline;
+	border-bottom: 1px dotted rgba( 0, 0, 0, 0.15 );
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	padding: 2px 0;
+}
+
+.menucraft-item-variant:last-child {
+	border-bottom: 0;
+}
+
+.menucraft-item-variant-label {
+	font-size: 0.95em;
+}
+
+.menucraft-item-variant-price {
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+/* Meta — allergens + tags */
+
+.menucraft-item-meta {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-top: 4px;
+}
+
+.menucraft-item-allergens {
+	color: rgba( 0, 0, 0, 0.6 );
+	font-size: 0.85em;
+}
+
+.menucraft-item-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.menucraft-item-tag {
+	background: transparent;
+	border: 1px solid rgba( 0, 0, 0, 0.2 );
+	border-radius: 999px;
+	font-size: 0.75em;
+	line-height: 1;
+	padding: 3px 8px;
+}
+
+/* ============================================================= Modal */
+
+.menucraft-modal {
+	display: none;
+}
+
+.menucraft-modal.is-open {
+	align-items: center;
+	display: flex;
+	inset: 0;
+	justify-content: center;
+	padding: 20px;
+	position: fixed;
+	z-index: 99999;
+}
+
+.menucraft-modal-backdrop {
+	background: rgba( 0, 0, 0, 0.55 );
+	cursor: pointer;
+	inset: 0;
+	position: absolute;
+}
+
+.menucraft-modal-dialog {
+	background: #ffffff;
+	border-radius: 10px;
+	box-shadow: 0 20px 60px rgba( 0, 0, 0, 0.35 );
+	color: #1d2327;
+	display: flex;
+	flex-direction: column;
+	max-height: calc( 100vh - 40px );
+	max-width: 640px;
+	overflow: hidden;
+	position: relative;
+	width: 100%;
+}
+
+.menucraft-modal-header {
+	align-items: flex-start;
+	border-bottom: 1px solid rgba( 0, 0, 0, 0.08 );
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	padding: 16px 20px;
+}
+
+.menucraft-modal-title {
+	font-size: 1.2em;
+	font-weight: 700;
+	line-height: 1.3;
+	margin: 0;
+}
+
+.menucraft-modal-close {
+	background: transparent;
+	border: 0;
+	color: inherit;
+	cursor: pointer;
+	font-size: 1.6em;
+	line-height: 1;
+	padding: 0 4px;
+}
+
+.menucraft-modal-body {
+	overflow-y: auto;
+	padding: 16px 20px 20px;
+}
+
+.menucraft-modal-body .menucraft-modal-desc {
+	line-height: 1.55;
+}
+
+.menucraft-modal-body .menucraft-modal-desc p {
+	margin: 0 0 0.75em;
+}
+
+.menucraft-modal-variants {
+	border-top: 1px solid rgba( 0, 0, 0, 0.08 );
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	list-style: none;
+	margin: 12px 0 0;
+	padding: 12px 0 0;
+}
+
+.menucraft-modal-variants li {
+	align-items: baseline;
+	border-bottom: 1px dotted rgba( 0, 0, 0, 0.12 );
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	padding: 4px 0;
+}
+
+.menucraft-modal-variants li:last-child {
+	border-bottom: 0;
+}
+
+.menucraft-modal-variant-price {
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+body.menucraft-modal-lock {
+	overflow: hidden;
+}
+
+/* ============================================================= Responsive */
+
+@media ( max-width: 520px ) {
+	.menucraft-item--image-left,
+	.menucraft-item--image-right {
+		grid-template-columns: 80px 1fr;
+	}
+	.menucraft-item--image-right {
+		grid-template-columns: 1fr 80px;
+	}
+	.menucraft-item--image-left .menucraft-item-media img,
+	.menucraft-item--image-right .menucraft-item-media img {
+		width: 80px;
+	}
+	.menucraft-item-head {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 4px;
+	}
+}

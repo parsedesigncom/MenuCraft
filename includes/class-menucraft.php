@@ -76,8 +76,8 @@ class MenuCraft {
 	 */
 	private function define_public_hooks() {
 		$public = new MenuCraft_Public( MENUCRAFT_TEXT_DOMAIN, MENUCRAFT_VERSION );
-		// Hooks will be registered here in future iterations.
-		unset( $public );
+		$this->loader->add_action( 'init', $public, 'register_shortcodes' );
+		$this->loader->add_action( 'wp_enqueue_scripts', $public, 'register_assets' );
 	}
 
 	/**

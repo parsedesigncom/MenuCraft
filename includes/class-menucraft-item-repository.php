@@ -147,7 +147,7 @@ class MenuCraft_Item_Repository {
 		self::sync_junction( $item_id, 'item_allergens', 'allergen_id', isset( $data['allergen_ids'] ) ? $data['allergen_ids'] : array() );
 
 		if ( isset( $data['variants'] ) && is_array( $data['variants'] ) ) {
-			self::replace_variants( $item_id, $data['variants'] );
+			self::sync_variants( $item_id, $data['variants'] );
 		}
 
 		return self::find( $item_id );
@@ -231,7 +231,7 @@ class MenuCraft_Item_Repository {
 			self::sync_junction( $id, 'item_allergens', 'allergen_id', $data['allergen_ids'] );
 		}
 		if ( array_key_exists( 'variants', $data ) && is_array( $data['variants'] ) ) {
-			self::replace_variants( $id, $data['variants'] );
+			self::sync_variants( $id, $data['variants'] );
 		}
 
 		return self::find( $id );
@@ -488,44 +488,129 @@ class MenuCraft_Item_Repository {
 	}
 
 	/**
-	 * Replace all variants for an item with the provided list.
+	 * Compute which variant IDs a "replace with this list" call would
+	 * delete — i.e. rows currently on the item whose id is not carried
+	 * in the payload. Used by the REST layer to run delete-guards
+	 * (offer references) before mutating.
 	 *
-	 * @param int                                     $item_id  Item ID.
-	 * @param array<int,array<string,mixed>>          $variants Variant payloads
-	 *                                                          with keys label, price, sort_order?, is_active?.
+	 * @param int                            $item_id  Item ID.
+	 * @param array<int,array<string,mixed>> $variants Payload variants.
+	 * @return array<int,int> Variant IDs that would be dropped.
 	 */
-	private static function replace_variants( $item_id, array $variants ) {
+	public static function variants_to_remove( $item_id, array $variants ) {
 		global $wpdb;
 		$tables = MenuCraft_Schema::tables();
 		$table  = $tables['item_variants'];
 
-		$wpdb->delete( $table, array( 'item_id' => (int) $item_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$existing = array_map(
+			'intval',
+			(array) $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare( "SELECT id FROM `{$table}` WHERE item_id = %d", (int) $item_id ) // phpcs:ignore WordPress.DB
+			)
+		);
 
-		$now      = current_time( 'mysql', 1 );
-		$position = 0;
+		$kept = array();
 		foreach ( $variants as $variant ) {
 			$label = isset( $variant['label'] ) ? trim( (string) $variant['label'] ) : '';
 			if ( '' === $label ) {
 				continue;
 			}
-			$price = isset( $variant['price'] ) ? (float) $variant['price'] : 0.0;
-			$sort  = isset( $variant['sort_order'] ) ? (int) $variant['sort_order'] : $position;
-			$active = ! isset( $variant['is_active'] ) || ! empty( $variant['is_active'] ) ? 1 : 0;
+			$vid = isset( $variant['id'] ) ? (int) $variant['id'] : 0;
+			if ( $vid > 0 ) {
+				$kept[ $vid ] = true;
+			}
+		}
 
-			$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return array_values( array_diff( $existing, array_keys( $kept ) ) );
+	}
+
+	/**
+	 * Reconcile item variants with the provided list. Rows carrying a
+	 * matching `id` are UPDATED in place (so external references —
+	 * e.g. from offer_items — survive), rows without an id are INSERTED,
+	 * and existing rows whose id is absent from the payload are DELETED.
+	 *
+	 * Delete-guards (for offer references) must run in the caller before
+	 * invoking this — see variants_to_remove().
+	 *
+	 * @param int                                     $item_id  Item ID.
+	 * @param array<int,array<string,mixed>>          $variants Variant payloads
+	 *                                                          with keys id?, label, price, sort_order?, is_active?.
+	 */
+	private static function sync_variants( $item_id, array $variants ) {
+		global $wpdb;
+		$tables  = MenuCraft_Schema::tables();
+		$table   = $tables['item_variants'];
+		$item_id = (int) $item_id;
+
+		$existing_ids = array_map(
+			'intval',
+			(array) $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare( "SELECT id FROM `{$table}` WHERE item_id = %d", $item_id ) // phpcs:ignore WordPress.DB
+			)
+		);
+		$existing_set = array_flip( $existing_ids );
+
+		$now      = current_time( 'mysql', 1 );
+		$seen     = array();
+		$position = 0;
+
+		foreach ( $variants as $variant ) {
+			$label = isset( $variant['label'] ) ? trim( (string) $variant['label'] ) : '';
+			if ( '' === $label ) {
+				continue;
+			}
+			$price  = isset( $variant['price'] ) ? (float) $variant['price'] : 0.0;
+			$sort   = isset( $variant['sort_order'] ) ? (int) $variant['sort_order'] : $position;
+			$active = ! isset( $variant['is_active'] ) || ! empty( $variant['is_active'] ) ? 1 : 0;
+			$vid    = isset( $variant['id'] ) ? (int) $variant['id'] : 0;
+
+			if ( $vid > 0 && isset( $existing_set[ $vid ] ) ) {
+				$wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					$table,
+					array(
+						'label'      => $label,
+						'price'      => $price,
+						'sort_order' => $sort,
+						'is_active'  => $active,
+						'updated_at' => $now,
+					),
+					array(
+						'id'      => $vid,
+						'item_id' => $item_id,
+					),
+					array( '%s', '%f', '%d', '%d', '%s' ),
+					array( '%d', '%d' )
+				);
+				$seen[ $vid ] = true;
+			} else {
+				$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					$table,
+					array(
+						'item_id'    => $item_id,
+						'label'      => $label,
+						'price'      => $price,
+						'sort_order' => $sort,
+						'is_active'  => $active,
+						'created_at' => $now,
+						'updated_at' => $now,
+					),
+					array( '%d', '%s', '%f', '%d', '%d', '%s', '%s' )
+				);
+			}
+			$position++;
+		}
+
+		$to_delete = array_diff( $existing_ids, array_keys( $seen ) );
+		foreach ( $to_delete as $vid ) {
+			$wpdb->delete( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$table,
 				array(
-					'item_id'    => (int) $item_id,
-					'label'      => $label,
-					'price'      => $price,
-					'sort_order' => $sort,
-					'is_active'  => $active,
-					'created_at' => $now,
-					'updated_at' => $now,
+					'id'      => (int) $vid,
+					'item_id' => $item_id,
 				),
-				array( '%d', '%s', '%f', '%d', '%d', '%s', '%s' )
+				array( '%d', '%d' )
 			);
-			$position++;
 		}
 	}
 

@@ -123,6 +123,19 @@ class MenuCraft_Admin {
 					'bulkNoSelection' => __( 'Select at least one item first.', 'menucraft' ),
 					'filtersActive'   => __( '%d filter(s) active', 'menucraft' ),
 					'noMatches'       => __( 'No items match the current filters.', 'menucraft' ),
+					'offerLinesNone'  => __( 'None', 'menucraft' ),
+					'offerLinesCount' => __( '%d line(s)', 'menucraft' ),
+					'offerQuantity'   => __( 'Qty', 'menucraft' ),
+					'offerPickVariant' => __( '— pick variant —', 'menucraft' ),
+					'offerNoVariant'  => __( '(no variant)', 'menucraft' ),
+					'offerRemoveLine' => __( 'Remove line', 'menucraft' ),
+					'offerAlways'     => __( 'Always', 'menucraft' ),
+					'offerFrom'       => __( 'From %s', 'menucraft' ),
+					'offerUntil'      => __( 'Until %s', 'menucraft' ),
+					'offerBetween'    => __( '%1$s – %2$s', 'menucraft' ),
+					'offerCurrent'    => __( 'Currently valid', 'menucraft' ),
+					'offerUpcoming'   => __( 'Upcoming', 'menucraft' ),
+					'offerExpired'    => __( 'Expired', 'menucraft' ),
 				),
 			)
 		);
@@ -212,7 +225,7 @@ class MenuCraft_Admin {
 			__( 'Offers', 'menucraft' ),
 			'manage_options',
 			'menucraft-offers',
-			array( $this, 'render_placeholder' )
+			array( $this, 'render_offers_page' )
 		);
 
 		$this->page_hooks[] = add_submenu_page(
@@ -311,6 +324,17 @@ class MenuCraft_Admin {
 		}
 
 		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-items.php';
+	}
+
+	/**
+	 * Render the Offers admin screen.
+	 */
+	public function render_offers_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-offers.php';
 	}
 
 	/**

@@ -133,12 +133,14 @@ class MenuCraft_Schema {
 			KEY is_active (is_active)
 		) {$charset};";
 
-		// Offers / bundles.
+		// Offers / bundles. conditions_text is a free-form field for terms
+		// like "min order value 20€" or "regulars only" — no cart yet.
 		$statements[] = "CREATE TABLE {$t['offers']} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			name varchar(200) NOT NULL,
 			slug varchar(191) NOT NULL,
 			description text NULL,
+			conditions_text text NULL,
 			price decimal(10,2) NOT NULL,
 			media_id bigint(20) unsigned NULL,
 			valid_from datetime NULL DEFAULT NULL,
@@ -178,14 +180,21 @@ class MenuCraft_Schema {
 			KEY allergen_id (allergen_id)
 		) {$charset};";
 
-		// Junction: offer ↔ item (bundle contents with quantity).
+		// Offer contents. Each row is one line in the bundle: an item
+		// (optionally pinned to a specific variant) with a quantity. An
+		// item may appear multiple times with different variants, so the
+		// PK is a synthetic id rather than (offer_id, item_id).
 		$statements[] = "CREATE TABLE {$t['offer_items']} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			offer_id bigint(20) unsigned NOT NULL,
 			item_id bigint(20) unsigned NOT NULL,
+			variant_id bigint(20) unsigned NULL,
 			quantity int(11) NOT NULL DEFAULT 1,
 			sort_order int(11) NOT NULL DEFAULT 0,
-			PRIMARY KEY  (offer_id,item_id),
-			KEY item_id (item_id)
+			PRIMARY KEY  (id),
+			KEY offer_id (offer_id),
+			KEY item_id (item_id),
+			KEY variant_id (variant_id)
 		) {$charset};";
 
 		// Plugin options (self-contained key/value store, independent of wp_options).
@@ -287,6 +296,91 @@ class MenuCraft_Schema {
 					// Dropping the column also removes any single-column index on it.
 					$wpdb->query( "ALTER TABLE `{$table}` DROP COLUMN `parent_id`" ); // phpcs:ignore WordPress.DB
 				}
+			}
+		}
+
+		if ( version_compare( $from_version, '1.3', '<' ) ) {
+			// Offers: free-form conditions text ("min. 20€", "regulars only").
+			$offers         = $tables['offers'];
+			$has_conditions = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SHOW COLUMNS FROM `{$offers}` LIKE %s", // phpcs:ignore WordPress.DB
+					'conditions_text'
+				)
+			);
+			if ( ! $has_conditions ) {
+				$wpdb->query( "ALTER TABLE `{$offers}` ADD COLUMN `conditions_text` TEXT NULL AFTER `description`" ); // phpcs:ignore WordPress.DB
+			}
+		}
+
+		if ( version_compare( $from_version, '1.4', '<' ) ) {
+			// offer_items needs a synthetic id PK so an item may appear
+			// several times pinned to different variants. Rebuilt as a
+			// three-phase idempotent sequence because dbDelta cannot alter
+			// primary keys and earlier attempts at combining the DROP PK +
+			// ADD COLUMN into a single ALTER left some installs in a mixed
+			// state (id column present, compound PK still on the table).
+			$offer_items = $tables['offer_items'];
+
+			// Phase 1: ensure `variant_id` column + index exist.
+			$has_variant = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SHOW COLUMNS FROM `{$offer_items}` LIKE %s", // phpcs:ignore WordPress.DB
+					'variant_id'
+				)
+			);
+			if ( ! $has_variant ) {
+				$wpdb->query( "ALTER TABLE `{$offer_items}` ADD COLUMN `variant_id` BIGINT(20) UNSIGNED NULL AFTER `item_id`, ADD KEY `variant_id` (`variant_id`)" ); // phpcs:ignore WordPress.DB
+			}
+
+			// Phase 2: normalise the primary key. Read the current PK
+			// columns from information_schema; if it is anything other
+			// than exactly `[id]`, drop it (and any id column that may
+			// have been half-added by dbDelta) so the next phase can
+			// recreate it cleanly.
+			$pk_cols_rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				"SHOW INDEX FROM `{$offer_items}` WHERE Key_name = 'PRIMARY'", // phpcs:ignore WordPress.DB
+				ARRAY_A
+			);
+			$pk_cols = array();
+			if ( is_array( $pk_cols_rows ) ) {
+				foreach ( $pk_cols_rows as $r ) {
+					$pk_cols[] = isset( $r['Column_name'] ) ? $r['Column_name'] : '';
+				}
+			}
+			$pk_is_id_only = ( count( $pk_cols ) === 1 && 'id' === $pk_cols[0] );
+
+			$has_id_column = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SHOW COLUMNS FROM `{$offer_items}` LIKE %s", // phpcs:ignore WordPress.DB
+					'id'
+				)
+			);
+
+			if ( ! $pk_is_id_only ) {
+				// Drop the compound PK if any.
+				if ( ! empty( $pk_cols ) ) {
+					$wpdb->query( "ALTER TABLE `{$offer_items}` DROP PRIMARY KEY" ); // phpcs:ignore WordPress.DB
+				}
+				// Drop any half-baked id column left by dbDelta so we can
+				// re-add it with AUTO_INCREMENT + PRIMARY KEY in one go.
+				if ( $has_id_column ) {
+					$wpdb->query( "ALTER TABLE `{$offer_items}` DROP COLUMN `id`" ); // phpcs:ignore WordPress.DB
+				}
+				$wpdb->query( "ALTER TABLE `{$offer_items}` ADD COLUMN `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST" ); // phpcs:ignore WordPress.DB
+			}
+
+			// Phase 3: make sure offer_id is indexed on its own. Dropping
+			// the compound PK removes the leading-column index on offer_id;
+			// re-add it if missing.
+			$has_offer_key = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SHOW INDEX FROM `{$offer_items}` WHERE Key_name = %s", // phpcs:ignore WordPress.DB
+					'offer_id'
+				)
+			);
+			if ( ! $has_offer_key ) {
+				$wpdb->query( "ALTER TABLE `{$offer_items}` ADD KEY `offer_id` (`offer_id`)" ); // phpcs:ignore WordPress.DB
 			}
 		}
 	}

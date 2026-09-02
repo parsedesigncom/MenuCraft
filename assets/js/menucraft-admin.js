@@ -43,6 +43,10 @@
 	// between "Manage Variants" clicks and the eventual form submit.
 	var itemFormState = { variants: [] };
 
+	// Same idea for the offer form — line items live in memory between
+	// "Manage Items" clicks and submit.
+	var offerFormState = { items: [] };
+
 	// Per-resource selection state (Set of selected IDs). Only tables with
 	// data-menucraft-selectable participate.
 	var selections = {};
@@ -60,6 +64,7 @@
 			price_min: null,
 			price_max: null,
 			image: '',
+			validity: '',
 		};
 	}
 
@@ -142,7 +147,17 @@
 		var subOpener = event.target.closest( '[data-menucraft-subpanel-open]' );
 		if ( subOpener ) {
 			event.preventDefault();
-			openPanel( subOpener.getAttribute( 'data-menucraft-subpanel-open' ) );
+			var subPanelId = subOpener.getAttribute( 'data-menucraft-subpanel-open' );
+			// Offer items sub-panel: make sure the items cache is loaded
+			// (and chips + list are rendered) before the user sees an
+			// empty picker, in case they open it before the initial fetch
+			// resolved.
+			if ( subPanelId === 'menucraft-panel-offer-items' ) {
+				ensureResourceLoaded( 'items' );
+				renderOfferItemsChips();
+				renderOfferItemsList();
+			}
+			openPanel( subPanelId );
 			return;
 		}
 
@@ -367,18 +382,44 @@
 		// Chip selectors add their arrays to the payload.
 		collectChipSelections( form, payload );
 
-		// Items include their in-memory variants list.
+		// Items include their in-memory variants list. Existing variants
+		// carry their DB id so the backend can UPDATE in place rather than
+		// re-insert (which would invalidate offer_items references).
 		if ( 'items' === endpoint ) {
 			payload.variants = itemFormState.variants.map( function ( v ) {
-				return {
+				var out = {
 					label:      v.label,
 					price:      v.price,
 					sort_order: v.sort_order,
 				};
+				if ( v.id ) {
+					out.id = v.id;
+				}
+				return out;
 			} );
 			// Price: empty string means "unset" — send explicit null.
 			if ( payload.price === '' ) {
 				payload.price = null;
+			}
+		}
+
+		// Offers include their in-memory line items. Empty date fields
+		// become null so the backend's sanitizer treats them as "no limit"
+		// instead of parsing an empty string.
+		if ( 'offers' === endpoint ) {
+			payload.items = offerFormState.items.map( function ( line, idx ) {
+				return {
+					item_id:    line.item_id,
+					variant_id: line.variant_id || null,
+					quantity:   line.quantity || 1,
+					sort_order: idx,
+				};
+			} );
+			if ( payload.valid_from === '' ) {
+				payload.valid_from = null;
+			}
+			if ( payload.valid_until === '' ) {
+				payload.valid_until = null;
 			}
 		}
 
@@ -398,6 +439,7 @@
 					clearMedia
 				);
 				itemFormState.variants = [];
+				offerFormState.items   = [];
 
 				closePanel( panel );
 
@@ -506,6 +548,14 @@
 			renderVariantsList();
 		}
 
+		// Same treatment for offers — clear line-items state + UI.
+		if ( form.getAttribute( 'data-menucraft-endpoint' ) === 'offers' ) {
+			offerFormState.items = [];
+			renderOfferItemsSummary();
+			renderOfferItemsChips();
+			renderOfferItemsList();
+		}
+
 		var title = panel.querySelector( '[data-menucraft-title-create]' );
 		if ( title ) {
 			title.textContent = title.getAttribute( 'data-menucraft-title-create' );
@@ -559,10 +609,13 @@
 			}
 		);
 
-		// Item variants → in-memory state.
+		// Item variants → in-memory state. The DB id is kept so the save
+		// path can echo it back and the backend performs UPDATE, not
+		// re-insert (which would break offer_items references).
 		if ( form.getAttribute( 'data-menucraft-endpoint' ) === 'items' ) {
 			itemFormState.variants = ( entity.variants || [] ).map( function ( v ) {
 				return {
+					id:         v.id || 0,
 					label:      v.label || '',
 					price:      typeof v.price === 'number' ? v.price : parseFloat( v.price ) || 0,
 					sort_order: v.sort_order || 0,
@@ -570,6 +623,26 @@
 			} );
 			renderVariantsSummary();
 			renderVariantsList();
+		}
+
+		// Offer line items → in-memory state; datetime-local wants
+		// "Y-m-dTH:i", DB gives "Y-m-d H:i:s".
+		if ( form.getAttribute( 'data-menucraft-endpoint' ) === 'offers' ) {
+			offerFormState.items = ( entity.items || [] ).map( function ( line, idx ) {
+				return {
+					id:         line.id || 0,
+					item_id:    parseInt( line.item_id, 10 ) || 0,
+					variant_id: line.variant_id ? parseInt( line.variant_id, 10 ) : null,
+					quantity:   parseInt( line.quantity, 10 ) || 1,
+					sort_order: line.sort_order || idx,
+				};
+			} );
+			setFieldValue( form, 'valid_from', mysqlToDatetimeLocal( entity.valid_from || '' ) );
+			setFieldValue( form, 'valid_until', mysqlToDatetimeLocal( entity.valid_until || '' ) );
+			setFieldValue( form, 'conditions_text', entity.conditions_text || '' );
+			renderOfferItemsSummary();
+			renderOfferItemsChips();
+			renderOfferItemsList();
 		}
 
 		var title = panel.querySelector( '[data-menucraft-title-edit]' );
@@ -599,6 +672,7 @@
 		tags:       { buildRow: buildTermRow,     colspan: 7 },
 		allergens:  { buildRow: buildAllergenRow, colspan: 6 },
 		items:      { buildRow: buildItemRow,     colspan: 7 },
+		offers:     { buildRow: buildOfferRow,    colspan: 8 },
 	};
 
 	function initLists() {
@@ -634,6 +708,11 @@
 			ensureResourceLoaded( 'categories' );
 			ensureResourceLoaded( 'tags' );
 			ensureResourceLoaded( 'allergens' );
+		}
+
+		// Offers screen needs the items cache for the picker chips.
+		if ( listStates.offers ) {
+			ensureResourceLoaded( 'items' );
 		}
 
 		initFilters();
@@ -770,7 +849,8 @@
 	function updateFilterCount( container, f ) {
 		var badge = container.querySelector( '[data-menucraft-filters-count]' );
 		if ( ! badge ) return;
-		var n = countActiveFilters( f );
+		var resource = container.getAttribute( 'data-menucraft-filters' );
+		var n = resource === 'offers' ? countActiveOfferFilters( f ) : countActiveFilters( f );
 		if ( n === 0 ) {
 			badge.hidden = true;
 			badge.textContent = '';
@@ -848,8 +928,14 @@
 
 		var rows = state.cache;
 		var filters = filterState[ state.resource ];
-		if ( filters && hasActiveFilters( filters ) ) {
-			rows = rows.filter( function ( row ) { return matchesFilters( row, filters ); } );
+		if ( filters ) {
+			if ( state.resource === 'offers' ) {
+				if ( hasActiveOfferFilters( filters ) ) {
+					rows = rows.filter( function ( row ) { return matchesOfferFilters( row, filters ); } );
+				}
+			} else if ( hasActiveFilters( filters ) ) {
+				rows = rows.filter( function ( row ) { return matchesFilters( row, filters ); } );
+			}
 		}
 
 		if ( ! state.cache.length ) {
@@ -1342,6 +1428,19 @@
 			);
 			renderChips( container, selected );
 		} );
+
+		// Offer-items picker uses its own chip container backed by the
+		// items cache — re-render it whenever items load or change.
+		if ( resource === 'items' ) {
+			renderOfferItemsChips();
+			renderOfferItemsList();
+			// The offers table shows a pill per line item resolved via the
+			// items cache. When offers render before items are fetched,
+			// every row shows "—"; re-render once items are ready.
+			if ( listStates.offers && listStates.offers.body ) {
+				renderTable( listStates.offers );
+			}
+		}
 	}
 
 	document.addEventListener( 'click', function ( event ) {
@@ -1925,6 +2024,414 @@
 		}
 		if ( name === 'label' ) {
 			renderVariantsSummary();
+		}
+	} );
+
+	// =========================================================== Offers ==
+
+	function mysqlToDatetimeLocal( s ) {
+		if ( ! s ) return '';
+		// "2026-09-15 14:30:00" → "2026-09-15T14:30"
+		return String( s ).replace( ' ', 'T' ).substring( 0, 16 );
+	}
+
+	function currentMySQLString() {
+		var d   = new Date();
+		var pad = function ( n ) { return n < 10 ? '0' + n : String( n ); };
+		return d.getFullYear() + '-' + pad( d.getMonth() + 1 ) + '-' + pad( d.getDate() ) +
+			' ' + pad( d.getHours() ) + ':' + pad( d.getMinutes() ) + ':' + pad( d.getSeconds() );
+	}
+
+	function findItemInCache( id ) {
+		var state = listStates.items;
+		if ( ! state ) return null;
+		for ( var i = 0; i < state.cache.length; i++ ) {
+			if ( state.cache[ i ].id === id ) return state.cache[ i ];
+		}
+		return null;
+	}
+
+	function offerValidityStatus( offer, now ) {
+		var from  = offer.valid_from;
+		var until = offer.valid_until;
+		if ( ! from && ! until ) return 'always';
+		if ( from && from > now ) return 'upcoming';
+		if ( until && until < now ) return 'expired';
+		return 'current';
+	}
+
+	function hasActiveOfferFilters( f ) {
+		return !! (
+			f.search ||
+			f.status ||
+			f.validity ||
+			f.price_min !== null ||
+			f.price_max !== null ||
+			f.image
+		);
+	}
+
+	function countActiveOfferFilters( f ) {
+		var n = 0;
+		if ( f.search ) n++;
+		if ( f.status ) n++;
+		if ( f.validity ) n++;
+		if ( f.price_min !== null || f.price_max !== null ) n++;
+		if ( f.image ) n++;
+		return n;
+	}
+
+	function matchesOfferFilters( offer, f ) {
+		if ( f.search ) {
+			var q   = f.search.toLowerCase();
+			var hay = (
+				( offer.name || '' ) + ' ' +
+				( offer.description || '' ) + ' ' +
+				( offer.conditions_text || '' )
+			).toLowerCase();
+			if ( hay.indexOf( q ) === -1 ) return false;
+		}
+		if ( f.status === 'active' && ! offer.is_active ) return false;
+		if ( f.status === 'inactive' && offer.is_active ) return false;
+
+		if ( f.validity ) {
+			var status = offerValidityStatus( offer, currentMySQLString() );
+			if ( status !== f.validity ) return false;
+		}
+
+		if ( f.price_min !== null && offer.price < f.price_min ) return false;
+		if ( f.price_max !== null && offer.price > f.price_max ) return false;
+
+		if ( f.image === 'with' && ! offer.media_id ) return false;
+		if ( f.image === 'without' && offer.media_id ) return false;
+
+		return true;
+	}
+
+	// -------- Offer row (list-table) --------
+
+	function buildOfferRow( entity ) {
+		var tr = document.createElement( 'tr' );
+		tr.setAttribute( 'data-menucraft-row-id', String( entity.id ) );
+
+		tr.appendChild( buildThumbCell( entity ) );
+
+		var tdName = document.createElement( 'td' );
+		tdName.className   = 'menucraft-col-name';
+		var nameStrong     = document.createElement( 'strong' );
+		nameStrong.textContent = entity.name;
+		tdName.appendChild( nameStrong );
+		if ( entity.description ) {
+			var sub = document.createElement( 'div' );
+			sub.className   = 'menucraft-cell-sub';
+			sub.textContent = truncate( entity.description, 60 );
+			tdName.appendChild( sub );
+		}
+		if ( entity.conditions_text ) {
+			var cond = document.createElement( 'div' );
+			cond.className   = 'menucraft-cell-sub menucraft-cell-conditions';
+			cond.textContent = truncate( entity.conditions_text, 60 );
+			cond.title       = entity.conditions_text;
+			tdName.appendChild( cond );
+		}
+		tr.appendChild( tdName );
+
+		var tdPrice = document.createElement( 'td' );
+		tdPrice.className = 'menucraft-col-price';
+		var priceStrong   = document.createElement( 'strong' );
+		priceStrong.textContent = formatPrice( entity.price );
+		tdPrice.appendChild( priceStrong );
+		tr.appendChild( tdPrice );
+
+		var tdValidity = document.createElement( 'td' );
+		tdValidity.className = 'menucraft-col-validity';
+		tdValidity.appendChild( buildOfferValidityCell( entity ) );
+		tr.appendChild( tdValidity );
+
+		var tdItems = document.createElement( 'td' );
+		tdItems.className = 'menucraft-col-items';
+		tdItems.appendChild( buildOfferItemsCell( entity ) );
+		tr.appendChild( tdItems );
+
+		tr.appendChild( buildActiveCell( entity ) );
+		tr.appendChild( buildDatesCellWrapped( entity ) );
+		tr.appendChild( buildActionsCellWrapped( entity ) );
+
+		return tr;
+	}
+
+	function buildOfferValidityCell( offer ) {
+		var wrap   = document.createElement( 'div' );
+		wrap.className = 'menucraft-cell-validity';
+
+		var from  = offer.valid_from ? String( offer.valid_from ).substring( 0, 16 ).replace( 'T', ' ' ) : '';
+		var until = offer.valid_until ? String( offer.valid_until ).substring( 0, 16 ).replace( 'T', ' ' ) : '';
+
+		var range = document.createElement( 'div' );
+		if ( from && until ) {
+			var tmpl = i18n.offerBetween || '%1$s – %2$s';
+			range.textContent = tmpl.replace( '%1$s', from ).replace( '%2$s', until );
+		} else if ( from ) {
+			range.textContent = ( i18n.offerFrom || 'From %s' ).replace( '%s', from );
+		} else if ( until ) {
+			range.textContent = ( i18n.offerUntil || 'Until %s' ).replace( '%s', until );
+		} else {
+			range.textContent = i18n.offerAlways || 'Always';
+		}
+		wrap.appendChild( range );
+
+		var status = offerValidityStatus( offer, currentMySQLString() );
+		if ( status !== 'always' ) {
+			var badge = document.createElement( 'span' );
+			badge.className = 'menucraft-cell-sub menucraft-validity-badge menucraft-validity-' + status;
+			if ( status === 'current' ) badge.textContent = i18n.offerCurrent || 'Currently valid';
+			else if ( status === 'upcoming' ) badge.textContent = i18n.offerUpcoming || 'Upcoming';
+			else if ( status === 'expired' ) badge.textContent = i18n.offerExpired || 'Expired';
+			wrap.appendChild( badge );
+		}
+
+		return wrap;
+	}
+
+	function buildOfferItemsCell( offer ) {
+		var wrap = document.createElement( 'div' );
+		wrap.className = 'menucraft-related-list';
+
+		var lines = ( offer.items || [] );
+		if ( ! lines.length ) {
+			wrap.textContent = '—';
+			return wrap;
+		}
+
+		lines.forEach( function ( line ) {
+			var item = findItemInCache( parseInt( line.item_id, 10 ) );
+			if ( ! item ) return;
+
+			var label = item.name;
+			if ( line.variant_id ) {
+				var variant = ( item.variants || [] ).filter( function ( v ) {
+					return v.id === parseInt( line.variant_id, 10 );
+				} )[ 0 ];
+				if ( variant ) label += ' (' + variant.label + ')';
+			}
+			if ( line.quantity && line.quantity > 1 ) {
+				label = line.quantity + '× ' + label;
+			}
+			var pill = document.createElement( 'span' );
+			pill.className   = 'menucraft-related-pill';
+			pill.textContent = label;
+			wrap.appendChild( pill );
+		} );
+
+		if ( ! wrap.children.length ) {
+			wrap.textContent = '—';
+		}
+		return wrap;
+	}
+
+	// -------- Offer items sub-panel --------
+
+	function renderOfferItemsSummary() {
+		var counter = document.querySelector( '[data-menucraft-offer-items-count]' );
+		if ( ! counter ) return;
+		var n = offerFormState.items.length;
+		if ( n === 0 ) {
+			counter.textContent = i18n.offerLinesNone || 'None';
+		} else {
+			var tmpl = i18n.offerLinesCount || '%d line(s)';
+			counter.textContent = tmpl.replace( '%d', String( n ) );
+		}
+	}
+
+	function renderOfferItemsChips() {
+		var container = document.querySelector( '[data-menucraft-offer-items-chips]' );
+		if ( ! container ) return;
+
+		var emptyMsg = container.getAttribute( 'data-menucraft-chips-empty' ) || '';
+		var state    = listStates.items;
+
+		container.innerHTML = '';
+
+		if ( ! state || ! state.cache.length ) {
+			var empty = document.createElement( 'span' );
+			empty.className   = 'menucraft-chips-empty';
+			empty.textContent = emptyMsg;
+			container.appendChild( empty );
+			return;
+		}
+
+		// Count how many lines each item currently has (for the "×N" badge).
+		var counts = {};
+		offerFormState.items.forEach( function ( line ) {
+			counts[ line.item_id ] = ( counts[ line.item_id ] || 0 ) + 1;
+		} );
+
+		state.cache.forEach( function ( item ) {
+			if ( ! item.is_active ) return;
+			var chip = document.createElement( 'button' );
+			chip.type      = 'button';
+			chip.className = 'menucraft-chip';
+			if ( counts[ item.id ] ) {
+				chip.classList.add( 'menucraft-chip-selected' );
+			}
+			chip.setAttribute( 'data-menucraft-offer-items-chip', String( item.id ) );
+
+			var label = document.createElement( 'span' );
+			label.className   = 'menucraft-chip-label';
+			label.textContent = item.name;
+			chip.appendChild( label );
+
+			if ( counts[ item.id ] > 1 ) {
+				var badge = document.createElement( 'span' );
+				badge.className   = 'menucraft-chip-code';
+				badge.textContent = '×' + counts[ item.id ];
+				chip.appendChild( badge );
+			}
+			container.appendChild( chip );
+		} );
+	}
+
+	function renderOfferItemsList() {
+		var container = document.querySelector( '[data-menucraft-offer-items-list]' );
+		if ( ! container ) return;
+		container.innerHTML = '';
+
+		offerFormState.items.forEach( function ( line, index ) {
+			var item = findItemInCache( parseInt( line.item_id, 10 ) );
+			if ( ! item ) return;
+
+			var row = document.createElement( 'div' );
+			row.className = 'menucraft-offer-line';
+			row.setAttribute( 'data-menucraft-offer-line-index', String( index ) );
+
+			var nameCell = document.createElement( 'div' );
+			nameCell.className   = 'menucraft-offer-line-cell menucraft-offer-line-cell-name';
+			nameCell.textContent = item.name;
+			row.appendChild( nameCell );
+
+			var variantCell = document.createElement( 'div' );
+			variantCell.className = 'menucraft-offer-line-cell menucraft-offer-line-cell-variant';
+			var variants = ( item.variants || [] ).filter( function ( v ) { return v.is_active; } );
+			if ( variants.length ) {
+				var select = document.createElement( 'select' );
+				select.setAttribute( 'data-menucraft-offer-line-variant', '' );
+				select.setAttribute( 'aria-label', 'Variant' );
+				var opt0 = document.createElement( 'option' );
+				opt0.value       = '';
+				opt0.textContent = i18n.offerPickVariant || '— pick variant —';
+				select.appendChild( opt0 );
+				variants.forEach( function ( v ) {
+					var opt = document.createElement( 'option' );
+					opt.value       = String( v.id );
+					opt.textContent = v.label + ' — ' + formatPrice( v.price );
+					if ( line.variant_id === v.id ) opt.selected = true;
+					select.appendChild( opt );
+				} );
+				variantCell.appendChild( select );
+			} else {
+				var noVariant = document.createElement( 'span' );
+				noVariant.className   = 'menucraft-cell-sub';
+				noVariant.textContent = i18n.offerNoVariant || '(no variant)';
+				variantCell.appendChild( noVariant );
+			}
+			row.appendChild( variantCell );
+
+			var qtyCell = document.createElement( 'div' );
+			qtyCell.className = 'menucraft-offer-line-cell menucraft-offer-line-cell-qty';
+			var qtyLabel      = document.createElement( 'span' );
+			qtyLabel.className   = 'menucraft-cell-sub';
+			qtyLabel.textContent = ( i18n.offerQuantity || 'Qty' ) + ' ';
+			qtyCell.appendChild( qtyLabel );
+			var qtyInput = document.createElement( 'input' );
+			qtyInput.type  = 'number';
+			qtyInput.min   = '1';
+			qtyInput.step  = '1';
+			qtyInput.value = String( line.quantity || 1 );
+			qtyInput.setAttribute( 'data-menucraft-offer-line-qty', '' );
+			qtyInput.setAttribute( 'aria-label', i18n.offerQuantity || 'Qty' );
+			qtyCell.appendChild( qtyInput );
+			row.appendChild( qtyCell );
+
+			var removeCell = document.createElement( 'div' );
+			removeCell.className = 'menucraft-offer-line-cell menucraft-offer-line-cell-remove';
+			var removeBtn        = document.createElement( 'button' );
+			removeBtn.type      = 'button';
+			removeBtn.className = 'button-link menucraft-btn-icon';
+			removeBtn.title     = i18n.offerRemoveLine || 'Remove line';
+			removeBtn.setAttribute( 'aria-label', i18n.offerRemoveLine || 'Remove line' );
+			removeBtn.setAttribute( 'data-menucraft-offer-line-remove', '' );
+			removeBtn.innerHTML = '<span class="dashicons dashicons-trash" aria-hidden="true"></span>';
+			removeCell.appendChild( removeBtn );
+			row.appendChild( removeCell );
+
+			container.appendChild( row );
+		} );
+
+		var empty = document.querySelector( '[data-menucraft-offer-items-empty]' );
+		if ( empty ) {
+			empty.hidden = offerFormState.items.length > 0;
+		}
+	}
+
+	// Chip click → add a new line for that item. Same item can appear
+	// multiple times (different variants or quantities).
+	document.addEventListener( 'click', function ( event ) {
+		var chip = event.target.closest( '[data-menucraft-offer-items-chip]' );
+		if ( ! chip ) return;
+		event.preventDefault();
+		var itemId = parseInt( chip.getAttribute( 'data-menucraft-offer-items-chip' ), 10 );
+		if ( ! itemId ) return;
+		offerFormState.items.push( {
+			id:         0,
+			item_id:    itemId,
+			variant_id: null,
+			quantity:   1,
+			sort_order: offerFormState.items.length,
+		} );
+		renderOfferItemsChips();
+		renderOfferItemsList();
+		renderOfferItemsSummary();
+	} );
+
+	// Remove a line by index.
+	document.addEventListener( 'click', function ( event ) {
+		var removeBtn = event.target.closest( '[data-menucraft-offer-line-remove]' );
+		if ( ! removeBtn ) return;
+		event.preventDefault();
+		var row = removeBtn.closest( '[data-menucraft-offer-line-index]' );
+		if ( ! row ) return;
+		var idx = parseInt( row.getAttribute( 'data-menucraft-offer-line-index' ), 10 );
+		if ( isNaN( idx ) ) return;
+		offerFormState.items.splice( idx, 1 );
+		renderOfferItemsChips();
+		renderOfferItemsList();
+		renderOfferItemsSummary();
+	} );
+
+	// Variant selection or quantity change on an offer line.
+	document.addEventListener( 'change', function ( event ) {
+		var select = event.target.closest( '[data-menucraft-offer-line-variant]' );
+		if ( select ) {
+			var row = select.closest( '[data-menucraft-offer-line-index]' );
+			if ( ! row ) return;
+			var idx = parseInt( row.getAttribute( 'data-menucraft-offer-line-index' ), 10 );
+			if ( ! isNaN( idx ) && offerFormState.items[ idx ] ) {
+				var v = parseInt( select.value, 10 );
+				offerFormState.items[ idx ].variant_id = v ? v : null;
+			}
+		}
+	} );
+
+	document.addEventListener( 'input', function ( event ) {
+		var qty = event.target.closest( '[data-menucraft-offer-line-qty]' );
+		if ( qty ) {
+			var row = qty.closest( '[data-menucraft-offer-line-index]' );
+			if ( ! row ) return;
+			var idx = parseInt( row.getAttribute( 'data-menucraft-offer-line-index' ), 10 );
+			if ( ! isNaN( idx ) && offerFormState.items[ idx ] ) {
+				var n = parseInt( qty.value, 10 );
+				offerFormState.items[ idx ].quantity = ( isNaN( n ) || n < 1 ) ? 1 : n;
+			}
 		}
 	} );
 

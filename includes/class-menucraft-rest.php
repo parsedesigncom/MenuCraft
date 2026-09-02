@@ -53,6 +53,7 @@ class MenuCraft_REST {
 		}
 		self::register_allergen_routes();
 		self::register_item_routes();
+		self::register_offer_routes();
 	}
 
 	/**
@@ -910,6 +911,13 @@ class MenuCraft_REST {
 			}
 		}
 
+		if ( isset( $data['variants'] ) ) {
+			$blocked = self::variants_blocked_by_offers( $id, $data['variants'] );
+			if ( is_wp_error( $blocked ) ) {
+				return $blocked;
+			}
+		}
+
 		$updated = MenuCraft_Item_Repository::update( $id, $data );
 		if ( null === $updated ) {
 			return new WP_Error( 'menucraft_update_failed', __( 'Could not update.', 'menucraft' ), array( 'status' => 500 ) );
@@ -929,6 +937,22 @@ class MenuCraft_REST {
 		$existing = MenuCraft_Item_Repository::find( $id );
 		if ( null === $existing ) {
 			return self::not_found( 'item' );
+		}
+
+		$blocking = MenuCraft_Offer_Repository::offers_using_item( $id );
+		if ( ! empty( $blocking ) ) {
+			return new WP_Error(
+				'menucraft_item_in_offer',
+				sprintf(
+					/* translators: %s: comma-separated offer names */
+					__( 'Cannot delete — this item is used in offer(s): %s.', 'menucraft' ),
+					implode( ', ', array_values( $blocking ) )
+				),
+				array(
+					'status' => 409,
+					'offers' => $blocking,
+				)
+			);
 		}
 
 		$ok = MenuCraft_Item_Repository::delete( $id );
@@ -1115,6 +1139,476 @@ class MenuCraft_REST {
 				if ( null === call_user_func( array( $spec[0], 'find' ), $int_id ) ) {
 					return new WP_Error( 'menucraft_invalid_relation', $spec[1], array( 'status' => 400 ) );
 				}
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Refuse a variant-set update that would drop any variant currently
+	 * referenced by an offer line. Returns the first offending variant as
+	 * a WP_Error; otherwise true.
+	 *
+	 * @param int                            $item_id  Item ID being updated.
+	 * @param array<int,array<string,mixed>> $variants Incoming variants payload.
+	 * @return true|WP_Error
+	 */
+	private static function variants_blocked_by_offers( $item_id, array $variants ) {
+		$to_remove = MenuCraft_Item_Repository::variants_to_remove( $item_id, $variants );
+		foreach ( $to_remove as $vid ) {
+			$blocking = MenuCraft_Offer_Repository::offers_using_variant( $vid );
+			if ( ! empty( $blocking ) ) {
+				return new WP_Error(
+					'menucraft_variant_in_offer',
+					sprintf(
+						/* translators: %s: comma-separated offer names */
+						__( 'Cannot remove a variant — it is used in offer(s): %s.', 'menucraft' ),
+						implode( ', ', array_values( $blocking ) )
+					),
+					array(
+						'status' => 409,
+						'offers' => $blocking,
+					)
+				);
+			}
+		}
+		return true;
+	}
+
+	// ==================================================== Offer handlers ==
+
+	/**
+	 * Register /offers routes.
+	 */
+	private static function register_offer_routes() {
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/offers',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( __CLASS__, 'list_offers' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( __CLASS__, 'create_offer' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+					'args'                => self::offer_args( true ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/offers/(?P<id>\d+)',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( __CLASS__, 'get_offer' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( __CLASS__, 'update_offer' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+					'args'                => self::offer_args( false ),
+				),
+				array(
+					'methods'             => WP_REST_Server::DELETABLE,
+					'callback'            => array( __CLASS__, 'delete_offer' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Argument schema for offer create/update.
+	 *
+	 * items[] carries the offer line items; validated in the handler.
+	 * Date fields accept HTML datetime-local ("Y-m-d\TH:i") or MySQL
+	 * datetime, and are normalised to MySQL format by the sanitize helper.
+	 *
+	 * @param bool $required Set false for updates so partial payloads work.
+	 * @return array<string,array<string,mixed>>
+	 */
+	private static function offer_args( $required ) {
+		$args = array(
+			'name'            => array(
+				'required'          => (bool) $required,
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'description'     => array(
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_textarea_field',
+			),
+			'conditions_text' => array(
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_textarea_field',
+			),
+			'price'           => array(
+				'required'          => (bool) $required,
+				'sanitize_callback' => array( __CLASS__, 'sanitize_non_negative_price' ),
+			),
+			'media_id'        => array(
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+			),
+			'valid_from'      => array(
+				'sanitize_callback' => array( __CLASS__, 'sanitize_datetime_or_null' ),
+			),
+			'valid_until'     => array(
+				'sanitize_callback' => array( __CLASS__, 'sanitize_datetime_or_null' ),
+			),
+			'sort_order'      => array(
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+			),
+			'is_active'       => array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+			),
+			'items'           => array(
+				'type' => 'array',
+			),
+		);
+
+		if ( $required ) {
+			$args['description']['default']     = '';
+			$args['conditions_text']['default'] = '';
+			$args['media_id']['default']        = 0;
+			$args['sort_order']['default']      = 0;
+			$args['is_active']['default']       = true;
+			$args['items']['default']           = array();
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Sanitize a required, non-negative price. Empty / non-numeric → 0.
+	 *
+	 * @param mixed $value Incoming value.
+	 * @return float
+	 */
+	public static function sanitize_non_negative_price( $value ) {
+		if ( null === $value || '' === $value ) {
+			return 0.0;
+		}
+		$num = (float) $value;
+		return $num < 0 ? 0.0 : $num;
+	}
+
+	/**
+	 * Sanitize datetime input from HTML datetime-local ("Y-m-d\TH:i") or
+	 * MySQL datetime ("Y-m-d H:i:s") to MySQL format. Empty → null.
+	 *
+	 * @param mixed $value Incoming value.
+	 * @return string|null
+	 */
+	public static function sanitize_datetime_or_null( $value ) {
+		if ( null === $value || '' === $value ) {
+			return null;
+		}
+		$str = is_string( $value ) ? trim( $value ) : '';
+		if ( '' === $str ) {
+			return null;
+		}
+		// datetime-local uses "T" as separator; normalise to space.
+		$str  = str_replace( 'T', ' ', $str );
+		$time = strtotime( $str );
+		if ( false === $time ) {
+			return null;
+		}
+		return gmdate( 'Y-m-d H:i:s', $time );
+	}
+
+	/**
+	 * GET /offers.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function list_offers() {
+		$rows = MenuCraft_Offer_Repository::all();
+		$rows = array_map( array( __CLASS__, 'present' ), $rows );
+		return new WP_REST_Response( $rows, 200 );
+	}
+
+	/**
+	 * GET /offers/{id}.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function get_offer( WP_REST_Request $request ) {
+		$id     = (int) $request->get_param( 'id' );
+		$entity = MenuCraft_Offer_Repository::find( $id );
+		if ( null === $entity ) {
+			return self::not_found( 'offer' );
+		}
+		return new WP_REST_Response( self::present( $entity ), 200 );
+	}
+
+	/**
+	 * POST /offers.
+	 *
+	 * @param WP_REST_Request $request Sanitized request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function create_offer( WP_REST_Request $request ) {
+		$name = trim( (string) $request->get_param( 'name' ) );
+		if ( '' === $name ) {
+			return new WP_Error( 'menucraft_invalid_name', __( 'Name is required.', 'menucraft' ), array( 'status' => 400 ) );
+		}
+
+		$items      = self::read_offer_items( $request );
+		$validation = self::validate_offer_payload( $request, $items );
+		if ( is_wp_error( $validation ) ) {
+			return $validation;
+		}
+
+		$slug = MenuCraft_Slug::generate(
+			'offers',
+			$name,
+			array( 'MenuCraft_Offer_Repository', 'slug_exists' )
+		);
+
+		$entity = MenuCraft_Offer_Repository::insert(
+			array(
+				'name'            => $name,
+				'slug'            => $slug,
+				'description'     => (string) $request->get_param( 'description' ),
+				'conditions_text' => (string) $request->get_param( 'conditions_text' ),
+				'price'           => (float) $request->get_param( 'price' ),
+				'media_id'        => (int) $request->get_param( 'media_id' ),
+				'valid_from'      => $request->get_param( 'valid_from' ),
+				'valid_until'     => $request->get_param( 'valid_until' ),
+				'sort_order'      => (int) $request->get_param( 'sort_order' ),
+				'is_active'       => (bool) $request->get_param( 'is_active' ) ? 1 : 0,
+				'items'           => $items,
+			)
+		);
+
+		if ( null === $entity ) {
+			return new WP_Error( 'menucraft_insert_failed', __( 'Could not save.', 'menucraft' ), array( 'status' => 500 ) );
+		}
+
+		return new WP_REST_Response( self::present( $entity ), 201 );
+	}
+
+	/**
+	 * PUT/PATCH /offers/{id}.
+	 *
+	 * @param WP_REST_Request $request Sanitized request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function update_offer( WP_REST_Request $request ) {
+		$id       = (int) $request->get_param( 'id' );
+		$existing = MenuCraft_Offer_Repository::find( $id );
+		if ( null === $existing ) {
+			return self::not_found( 'offer' );
+		}
+
+		$items      = self::read_offer_items( $request );
+		$validation = self::validate_offer_payload( $request, $items );
+		if ( is_wp_error( $validation ) ) {
+			return $validation;
+		}
+
+		$data = array();
+
+		if ( $request->has_param( 'name' ) ) {
+			$name = trim( (string) $request->get_param( 'name' ) );
+			if ( '' === $name ) {
+				return new WP_Error( 'menucraft_invalid_name', __( 'Name is required.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+			$data['name'] = $name;
+			$data['slug'] = MenuCraft_Slug::generate(
+				'offers',
+				$name,
+				function ( $candidate ) use ( $id ) {
+					return MenuCraft_Offer_Repository::slug_exists( $candidate, $id );
+				}
+			);
+		}
+
+		foreach ( array( 'description', 'conditions_text', 'media_id', 'sort_order', 'valid_from', 'valid_until' ) as $field ) {
+			if ( $request->has_param( $field ) ) {
+				$data[ $field ] = $request->get_param( $field );
+			}
+		}
+
+		if ( $request->has_param( 'price' ) ) {
+			$data['price'] = (float) $request->get_param( 'price' );
+		}
+
+		if ( $request->has_param( 'is_active' ) ) {
+			$data['is_active'] = (bool) $request->get_param( 'is_active' ) ? 1 : 0;
+		}
+
+		// Only rewrite the offer_items list when the payload actually
+		// carried an items key — a bare update (e.g. toggling is_active)
+		// must not wipe existing lines.
+		$body = $request->get_json_params();
+		if ( is_array( $body ) && array_key_exists( 'items', $body ) ) {
+			$data['items'] = $items;
+		}
+
+		$updated = MenuCraft_Offer_Repository::update( $id, $data );
+		if ( null === $updated ) {
+			return new WP_Error( 'menucraft_update_failed', __( 'Could not update.', 'menucraft' ), array( 'status' => 500 ) );
+		}
+
+		return new WP_REST_Response( self::present( $updated ), 200 );
+	}
+
+	/**
+	 * DELETE /offers/{id}.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public static function delete_offer( WP_REST_Request $request ) {
+		$id       = (int) $request->get_param( 'id' );
+		$existing = MenuCraft_Offer_Repository::find( $id );
+		if ( null === $existing ) {
+			return self::not_found( 'offer' );
+		}
+
+		$ok = MenuCraft_Offer_Repository::delete( $id );
+		if ( ! $ok ) {
+			return new WP_Error( 'menucraft_delete_failed', __( 'Could not delete.', 'menucraft' ), array( 'status' => 500 ) );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'deleted'  => true,
+				'id'       => $id,
+				'previous' => self::present( $existing ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * Pull the offer_items list straight from the JSON body. WP's REST
+	 * arg pipeline was quietly dropping nested-object arrays for us in
+	 * some setups, so we bypass it for this one field and coerce every
+	 * line to an associative array up-front.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function read_offer_items( WP_REST_Request $request ) {
+		$body = $request->get_json_params();
+		if ( is_array( $body ) && isset( $body['items'] ) && is_array( $body['items'] ) ) {
+			$raw = $body['items'];
+		} else {
+			$raw = $request->get_param( 'items' );
+		}
+
+		if ( ! is_array( $raw ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $raw as $line ) {
+			if ( is_object( $line ) ) {
+				$line = (array) $line;
+			}
+			if ( is_array( $line ) ) {
+				$out[] = $line;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Validate an offer payload: image, date order, and every line item.
+	 * If a line's item has variants, variant_id is mandatory and must
+	 * belong to that item; if it has none, variant_id must be omitted.
+	 *
+	 * @param WP_REST_Request                $request Request.
+	 * @param array<int,array<string,mixed>> $items   Line items already
+	 *                                                normalised by
+	 *                                                read_offer_items().
+	 * @return true|WP_Error
+	 */
+	private static function validate_offer_payload( WP_REST_Request $request, array $items ) {
+		if ( $request->has_param( 'media_id' ) ) {
+			$media_id = (int) $request->get_param( 'media_id' );
+			if ( $media_id > 0 && ! wp_attachment_is_image( $media_id ) ) {
+				return new WP_Error( 'menucraft_invalid_media', __( 'Selected media is not an image.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+		}
+
+		$from  = $request->has_param( 'valid_from' ) ? $request->get_param( 'valid_from' ) : null;
+		$until = $request->has_param( 'valid_until' ) ? $request->get_param( 'valid_until' ) : null;
+		if ( $from && $until && strtotime( $until ) < strtotime( $from ) ) {
+			return new WP_Error( 'menucraft_invalid_dates', __( 'Valid-until must be on or after valid-from.', 'menucraft' ), array( 'status' => 400 ) );
+		}
+
+		foreach ( $items as $line ) {
+			$item_id = isset( $line['item_id'] ) ? (int) $line['item_id'] : 0;
+			if ( $item_id <= 0 ) {
+				return new WP_Error( 'menucraft_invalid_line', __( 'Each offer line needs an item.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+
+			$item = MenuCraft_Item_Repository::find( $item_id );
+			if ( null === $item ) {
+				return new WP_Error( 'menucraft_unknown_item', __( 'Unknown item in offer.', 'menucraft' ), array( 'status' => 400 ) );
+			}
+
+			$variant_id      = isset( $line['variant_id'] ) && $line['variant_id'] ? (int) $line['variant_id'] : 0;
+			$has_variants    = ! empty( $item['variants'] );
+			$valid_variants  = array();
+			if ( $has_variants ) {
+				foreach ( $item['variants'] as $v ) {
+					$valid_variants[ (int) $v['id'] ] = true;
+				}
+			}
+
+			if ( $has_variants && $variant_id <= 0 ) {
+				return new WP_Error(
+					'menucraft_variant_required',
+					sprintf(
+						/* translators: %s: item name */
+						__( 'Pick a variant for "%s".', 'menucraft' ),
+						$item['name']
+					),
+					array( 'status' => 400 )
+				);
+			}
+
+			if ( ! $has_variants && $variant_id > 0 ) {
+				return new WP_Error(
+					'menucraft_no_variants',
+					sprintf(
+						/* translators: %s: item name */
+						__( '"%s" has no variants — remove the variant selection.', 'menucraft' ),
+						$item['name']
+					),
+					array( 'status' => 400 )
+				);
+			}
+
+			if ( $variant_id > 0 && ! isset( $valid_variants[ $variant_id ] ) ) {
+				return new WP_Error(
+					'menucraft_variant_mismatch',
+					sprintf(
+						/* translators: %s: item name */
+						__( 'Selected variant does not belong to "%s".', 'menucraft' ),
+						$item['name']
+					),
+					array( 'status' => 400 )
+				);
+			}
+
+			if ( isset( $line['quantity'] ) && (int) $line['quantity'] < 1 ) {
+				return new WP_Error( 'menucraft_invalid_quantity', __( 'Quantity must be at least 1.', 'menucraft' ), array( 'status' => 400 ) );
 			}
 		}
 

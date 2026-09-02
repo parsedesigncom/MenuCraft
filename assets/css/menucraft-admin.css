@@ -1293,3 +1293,128 @@ body.menucraft-offcanvas-open {
 		top: 62px; /* below mobile admin bar (46) + margin */
 	}
 }
+
+/* Offers — table columns */
+
+.menucraft-col-validity { width: 200px; }
+.menucraft-col-items    { width: 220px; }
+
+/* Offers — form date row */
+
+.menucraft-field-row {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: 1fr 1fr;
+}
+
+/* Offers — validity cell (list) */
+
+.menucraft-cell-validity {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.menucraft-validity-badge {
+	border-radius: 999px;
+	display: inline-block;
+	font-size: 11px;
+	font-style: normal;
+	padding: 1px 8px;
+	width: fit-content;
+}
+
+.menucraft-validity-current {
+	background: #dcfce7;
+	color: #14532d;
+}
+
+.menucraft-validity-upcoming {
+	background: #dbeafe;
+	color: #1e3a8a;
+}
+
+.menucraft-validity-expired {
+	background: #fee2e2;
+	color: #7f1d1d;
+}
+
+.menucraft-cell-conditions {
+	font-style: italic;
+}
+
+/* Offers — sub-panel: chips picker + line rows */
+
+.menucraft-chips-picker {
+	border: 1px dashed #d1d5db;
+	border-radius: 6px;
+	padding: 8px;
+}
+
+.menucraft-offer-items-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.menucraft-offer-line {
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	display: grid;
+	gap: 8px;
+	grid-template-columns: 1fr 1fr 120px auto;
+	padding: 8px;
+}
+
+.menucraft-offer-line-cell-name {
+	font-weight: 600;
+}
+
+.menucraft-offer-line-cell select,
+.menucraft-offer-line-cell input {
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	box-sizing: border-box;
+	color: #1d2327;
+	font-size: 14px;
+	padding: 6px 10px;
+	width: 100%;
+}
+
+.menucraft-offer-line-cell-qty {
+	align-items: center;
+	display: flex;
+	gap: 6px;
+}
+
+.menucraft-offer-line-cell-qty input {
+	width: 72px;
+}
+
+.menucraft-offer-items-empty {
+	color: #8c92a4;
+	font-size: 13px;
+	font-style: italic;
+	padding: 12px 0;
+	text-align: center;
+}
+
+/* Offer-items summary in main panel — same shape as variants summary */
+
+.menucraft-offer-items-summary {
+	align-items: center;
+	background: #f9fafb;
+	border: 1px solid #e5e7eb;
+	border-radius: 6px;
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	padding: 10px 12px;
+}
+
+.menucraft-offer-items-count {
+	color: #4b5563;
+	font-size: 13px;
+}

@@ -71,16 +71,13 @@
 	function applyFilters( root ) {
 		var activeCats = collectActive( root, 'category' );
 		var activeTags = collectActive( root, 'tag' );
-		var activeAls  = collectActive( root, 'allergen' );
 		var items      = root.querySelectorAll( ITEM_SEL );
 
 		Array.prototype.forEach.call( items, function ( item ) {
 			var cats = parseIdList( item.getAttribute( 'data-menucraft-categories' ) );
 			var tags = parseIdList( item.getAttribute( 'data-menucraft-tags' ) );
-			var alls = parseIdList( item.getAttribute( 'data-menucraft-allergens' ) );
 			var show = itemHasAny( cats, activeCats )
-				&& itemHasAny( tags, activeTags )
-				&& itemHasAny( alls, activeAls );
+				&& itemHasAny( tags, activeTags );
 			if ( show ) {
 				item.removeAttribute( 'hidden' );
 			} else {

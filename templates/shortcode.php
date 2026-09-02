@@ -24,10 +24,9 @@ $grid_class   = ! empty( $config['grid_enabled'] ) ? ' menucraft-menu--grid' : '
 $titles       = isset( $config['titles'] ) ? $config['titles'] : array();
 $custom_class = ! empty( $config['custom_class'] ) ? ' ' . $config['custom_class'] : '';
 
-$filters_override = apply_filters( 'menucraft_shortcode_filters_html', '', $categories, $tags, $allergens );
+$filters_override = apply_filters( 'menucraft_shortcode_filters_html', '', $categories, $tags );
 $cats_override    = apply_filters( 'menucraft_shortcode_categories_html', '', $categories );
 $tags_override    = apply_filters( 'menucraft_shortcode_tags_html', '', $tags );
-$allergens_override = apply_filters( 'menucraft_shortcode_allergens_html', '', $allergens );
 $items_override   = apply_filters( 'menucraft_shortcode_items_html', '', $items );
 ?>
 <div class="menucraft menucraft-menu<?php echo esc_attr( $grid_class ); ?> menucraft-image-<?php echo esc_attr( $image_pos ); ?><?php echo esc_attr( $custom_class ); ?>"
@@ -41,7 +40,7 @@ $items_override   = apply_filters( 'menucraft_shortcode_items_html', '', $items 
 	<?php if ( is_string( $filters_override ) && '' !== $filters_override ) : ?>
 		<?php echo $filters_override; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 	<?php else : ?>
-		<?php do_action( 'menucraft_before_filters', $categories, $tags, $allergens ); ?>
+		<?php do_action( 'menucraft_before_filters', $categories, $tags ); ?>
 		<div class="menucraft-filter-bar" data-menucraft-filter-bar>
 
 			<?php if ( ! empty( $categories ) ) : ?>
@@ -84,28 +83,8 @@ $items_override   = apply_filters( 'menucraft_shortcode_items_html', '', $items 
 				<?php endif; ?>
 			<?php endif; ?>
 
-			<?php if ( ! empty( $allergens ) ) : ?>
-				<?php if ( is_string( $allergens_override ) && '' !== $allergens_override ) : ?>
-					<?php echo $allergens_override; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-				<?php else : ?>
-					<div class="menucraft-filter-group" data-menucraft-filter-group="allergen">
-						<span class="menucraft-filter-label"><?php echo esc_html( $titles['allergens'] ); ?></span>
-						<div class="menucraft-filter-chips">
-							<?php foreach ( $allergens as $allergen ) : ?>
-								<button type="button"
-									class="menucraft-filter-chip"
-									data-menucraft-filter="allergen"
-									data-menucraft-value="<?php echo esc_attr( (string) $allergen['id'] ); ?>">
-									<?php echo esc_html( $allergen['name'] ); ?>
-								</button>
-							<?php endforeach; ?>
-						</div>
-					</div>
-				<?php endif; ?>
-			<?php endif; ?>
-
 		</div>
-		<?php do_action( 'menucraft_after_filters', $categories, $tags, $allergens ); ?>
+		<?php do_action( 'menucraft_after_filters', $categories, $tags ); ?>
 	<?php endif; ?>
 
 	<?php if ( is_string( $items_override ) && '' !== $items_override ) : ?>

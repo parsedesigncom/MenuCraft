@@ -159,7 +159,6 @@ if ( $image_url ) {
 	data-menucraft-item="<?php echo esc_attr( (string) $item_id ); ?>"
 	data-menucraft-categories="<?php echo esc_attr( implode( ',', $categories ) ); ?>"
 	data-menucraft-tags="<?php echo esc_attr( implode( ',', $item_tag_ids ) ); ?>"
-	data-menucraft-allergens="<?php echo esc_attr( implode( ',', $item_all_ids ) ); ?>"
 	<?php if ( $has_details ) : ?>
 		tabindex="0"
 		role="button"

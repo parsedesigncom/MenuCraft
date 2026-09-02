@@ -70,11 +70,16 @@ defined( 'ABSPATH' ) || exit;
 						<p><?php esc_html_e( 'Example:', 'menucraft' ); ?></p>
 						<pre class="menucraft-help-code">[menucraft variants="modal"]</pre>
 
-						<h4><code>categories_title</code>, <code>tags_title</code>, <code>allergens_title</code></h4>
+						<h4><code>categories_title</code>, <code>tags_title</code></h4>
 						<p><?php esc_html_e( 'Change the label above each filter group.', 'menucraft' ); ?></p>
 						<p><?php esc_html_e( 'Use your own words.', 'menucraft' ); ?></p>
 						<p><?php esc_html_e( 'Example:', 'menucraft' ); ?></p>
 						<pre class="menucraft-help-code">[menucraft categories_title="Speisen" tags_title="Merkmale"]</pre>
+
+						<h4><code>allergens_title</code></h4>
+						<p><?php esc_html_e( 'Change the label of the allergen legend at the end of the menu.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Example:', 'menucraft' ); ?></p>
+						<pre class="menucraft-help-code">[menucraft allergens_title="Allergene"]</pre>
 
 						<h4><code>columns</code></h4>
 						<p><?php esc_html_e( 'Show the items as a grid with more than one column.', 'menucraft' ); ?></p>

@@ -48,6 +48,7 @@
 			title: __( 'Colors — Filter', 'menucraft' ),
 			colors: [
 				{ attr: 'filterBarBg',      label: __( 'Filter bar background', 'menucraft' ) },
+				{ attr: 'filterBarBorder',  label: __( 'Filter bar border', 'menucraft' ) },
 				{ attr: 'filterLabelColor', label: __( 'Filter labels', 'menucraft' ) },
 				{ attr: 'chipBg',           label: __( 'Chip background', 'menucraft' ) },
 				{ attr: 'chipText',         label: __( 'Chip text', 'menucraft' ) },
@@ -87,8 +88,13 @@
 	function colorSettingsFor( group, attrs, set ) {
 		return group.colors.map( function ( slot ) {
 			return {
-				label:    slot.label,
-				value:    attrs[ slot.attr ] || '',
+				label:       slot.label,
+				value:       attrs[ slot.attr ] || '',
+				// Show the alpha slider in the color picker so authors
+				// can dial in transparency (e.g. rgba(0,0,0,0.5) or a
+				// #RRGGBBAA hex). Values pass through the PHP sanitizer
+				// which already accepts hex-with-alpha, rgba() and hsla().
+				enableAlpha: true,
 				onChange: function ( v ) {
 					var upd = {};
 					upd[ slot.attr ] = v || '';

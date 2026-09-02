@@ -36,6 +36,7 @@ class MenuCraft_Block {
 			array( 'textColor',           '',                                       'color' ),
 			// Filter.
 			array( 'filterBarBg',         ' .menucraft-filter-bar',                 'background-color' ),
+			array( 'filterBarBorder',     ' .menucraft-filter-bar',                 'border-color' ),
 			array( 'filterLabelColor',    ' .menucraft-filter-label',               'color' ),
 			array( 'chipBg',              ' .menucraft-filter-chip',                'background-color' ),
 			array( 'chipText',            ' .menucraft-filter-chip',                'color' ),

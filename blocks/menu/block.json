@@ -47,6 +47,7 @@
 		"bgColor":              { "type": "string", "default": "" },
 		"textColor":            { "type": "string", "default": "" },
 		"filterBarBg":          { "type": "string", "default": "" },
+		"filterBarBorder":      { "type": "string", "default": "" },
 		"filterLabelColor":     { "type": "string", "default": "" },
 		"chipBg":               { "type": "string", "default": "" },
 		"chipText":             { "type": "string", "default": "" },

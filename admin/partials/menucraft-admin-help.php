@@ -124,7 +124,43 @@ defined( 'ABSPATH' ) || exit;
 					</div>
 				</details>
 
-				<?php // Further topics will be added as sibling <details> here. ?>
+				<?php // ---------- Gutenberg block ---------- ?>
+				<details class="menucraft-accordion-item">
+					<summary class="menucraft-accordion-summary">
+						<span class="menucraft-accordion-chevron" aria-hidden="true"></span>
+						<span class="menucraft-accordion-title"><?php esc_html_e( 'Menu block (Gutenberg)', 'menucraft' ); ?></span>
+					</summary>
+					<div class="menucraft-accordion-body">
+
+						<h3><?php esc_html_e( 'What is the menu block?', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'The menu block does the same thing as the shortcode.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'You use it inside the block editor without typing any code.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'How to add the block', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Open a page or post in the block editor.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Click the plus button to add a new block.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Search for:', 'menucraft' ); ?> <code>MenuCraft</code></p>
+						<p><?php esc_html_e( 'Pick the block named:', 'menucraft' ); ?> <strong><?php esc_html_e( 'MenuCraft Menu', 'menucraft' ); ?></strong></p>
+						<p><?php esc_html_e( 'You will see a live preview right away.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'How to configure the block', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Click the block once to select it.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'The settings appear on the right in the sidebar.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'You can change:', 'menucraft' ); ?></p>
+						<ul>
+							<li><?php esc_html_e( 'Layout: image position, variant display, allergen legend.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Filter titles: labels above each filter group.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Grid layout: turn on and set how many columns per screen width.', 'menucraft' ); ?></li>
+						</ul>
+						<p><?php esc_html_e( 'For an extra CSS class, use the standard "Advanced" section at the bottom of the sidebar.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Same as the shortcode', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'The block uses the shortcode under the hood.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Frontend output is identical, so you can mix and match:', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Use the block for easy visual editing, and the shortcode when you edit content in code or via a page builder that only accepts shortcodes.', 'menucraft' ); ?></p>
+
+					</div>
+				</details>
 
 			</div>
 		</div>

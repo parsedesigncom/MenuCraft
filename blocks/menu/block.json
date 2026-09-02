@@ -1,0 +1,40 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "menucraft/menu",
+	"title": "MenuCraft Menu",
+	"category": "menucraft",
+	"icon": "coffee",
+	"description": "Display your MenuCraft menu with optional filters, layout and image position.",
+	"keywords": [ "menu", "menucraft", "food", "restaurant" ],
+	"textdomain": "menucraft",
+	"attributes": {
+		"image": {
+			"type": "string",
+			"default": "left",
+			"enum": [ "left", "right", "top" ]
+		},
+		"variants": {
+			"type": "string",
+			"default": "inline",
+			"enum": [ "inline", "modal" ]
+		},
+		"categoriesTitle": { "type": "string", "default": "" },
+		"tagsTitle":       { "type": "string", "default": "" },
+		"allergensTitle":  { "type": "string", "default": "" },
+		"columns":         { "type": "string", "default": "" },
+		"allergensLegend": {
+			"type": "string",
+			"default": "show",
+			"enum": [ "show", "hide" ]
+		}
+	},
+	"supports": {
+		"className": true,
+		"html": false,
+		"align": [ "wide", "full" ]
+	},
+	"editorScript": "file:./index.js",
+	"style":       "menucraft-public",
+	"viewScript":  "menucraft-public"
+}

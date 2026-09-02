@@ -44,6 +44,7 @@ class MenuCraft {
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-item-repository.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-offer-repository.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-rest.php';
+		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-block.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'admin/class-menucraft-admin.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'public/class-menucraft-public.php';
 
@@ -73,11 +74,17 @@ class MenuCraft {
 
 	/**
 	 * Register public-facing hooks.
+	 *
+	 * Public assets are registered on `init` (not `wp_enqueue_scripts`) so
+	 * their handles exist in both frontend and block-editor contexts —
+	 * blocks reference them via block.json's `style` / `viewScript` fields
+	 * and WP looks them up at block-render time.
 	 */
 	private function define_public_hooks() {
 		$public = new MenuCraft_Public( MENUCRAFT_TEXT_DOMAIN, MENUCRAFT_VERSION );
 		$this->loader->add_action( 'init', $public, 'register_shortcodes' );
-		$this->loader->add_action( 'wp_enqueue_scripts', $public, 'register_assets' );
+		$this->loader->add_action( 'init', $public, 'register_assets' );
+		$this->loader->add_action( 'init', 'MenuCraft_Block', 'register' );
 	}
 
 	/**

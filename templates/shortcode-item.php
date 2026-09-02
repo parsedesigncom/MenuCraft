@@ -82,9 +82,12 @@ if ( $show_variants_modal ) {
 }
 
 // Allergen codes rendered inside the title as a small italic
-// superscript prefix (see .menucraft-item-allergens CSS).
+// superscript suffix (see .menucraft-item-allergens CSS). Skipped
+// entirely when the end-of-menu legend is hidden — without the legend
+// the code letters would be meaningless to visitors.
 $allergen_prefix = '';
-if ( ! empty( $item_all_ids ) ) {
+$show_allergens  = ! isset( $config['show_allergens_legend'] ) || ! empty( $config['show_allergens_legend'] );
+if ( $show_allergens && ! empty( $item_all_ids ) ) {
 	$codes = array();
 	foreach ( $item_all_ids as $aid ) {
 		if ( isset( $allergens[ $aid ] ) ) {

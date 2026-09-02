@@ -105,6 +105,8 @@ defined( 'ABSPATH' ) || exit;
 						<p><?php esc_html_e( 'Possible values:', 'menucraft' ); ?> <code>show</code>, <code>hide</code></p>
 						<p><?php esc_html_e( 'Default:', 'menucraft' ); ?> <code>show</code></p>
 						<p><?php esc_html_e( 'Use', 'menucraft' ); ?> <code>hide</code> <?php esc_html_e( 'if you do not want the list.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Note: with', 'menucraft' ); ?> <code>hide</code> <?php esc_html_e( 'the code letters next to each item are hidden as well.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Without the legend, the letters would have no meaning for visitors.', 'menucraft' ); ?></p>
 						<p><?php esc_html_e( 'Example:', 'menucraft' ); ?></p>
 						<pre class="menucraft-help-code">[menucraft allergens_legend="hide"]</pre>
 

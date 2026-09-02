@@ -104,12 +104,14 @@ defined( 'ABSPATH' ) || exit;
 									step="0.01"
 									min="0"
 									data-menucraft-filter="price_min"
+									data-menucraft-price
 									placeholder="<?php esc_attr_e( 'From', 'menucraft' ); ?>">
 								<span aria-hidden="true">–</span>
 								<input type="number"
 									step="0.01"
 									min="0"
 									data-menucraft-filter="price_max"
+									data-menucraft-price
 									placeholder="<?php esc_attr_e( 'To', 'menucraft' ); ?>">
 							</div>
 						</div>
@@ -232,6 +234,7 @@ defined( 'ABSPATH' ) || exit;
 							name="price"
 							step="0.01"
 							min="0"
+							data-menucraft-price
 							placeholder="<?php esc_attr_e( 'Leave empty when using variants only', 'menucraft' ); ?>">
 					</div>
 
@@ -464,6 +467,7 @@ defined( 'ABSPATH' ) || exit;
 							name="base_price_value"
 							step="0.01"
 							min="0"
+							data-menucraft-price
 							placeholder="<?php esc_attr_e( 'Amount', 'menucraft' ); ?>">
 						<p class="menucraft-field-help">
 							<?php esc_html_e( 'Items without a base price are skipped when increasing or decreasing.', 'menucraft' ); ?>
@@ -483,6 +487,7 @@ defined( 'ABSPATH' ) || exit;
 							name="variant_prices_value"
 							step="0.01"
 							min="0"
+							data-menucraft-price
 							placeholder="<?php esc_attr_e( 'Amount', 'menucraft' ); ?>">
 						<p class="menucraft-field-help">
 							<?php esc_html_e( 'Applies to every variant of every selected item. Prices are floored at 0.', 'menucraft' ); ?>

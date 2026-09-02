@@ -1940,8 +1940,9 @@
 			priceInput.min   = '0';
 			priceInput.value = typeof variant.price === 'number' ? variant.price.toFixed( 2 ) : String( variant.price || 0 );
 			priceInput.setAttribute( 'data-menucraft-variant-field', 'price' );
+			priceInput.setAttribute( 'data-menucraft-price', '' );
 			priceInput.setAttribute( 'aria-label', i18n.variantPrice || 'Price' );
-			priceField.appendChild( priceInput );
+			priceField.appendChild( wrapPriceInput( priceInput ) );
 
 			var removeCell = document.createElement( 'div' );
 			removeCell.className = 'menucraft-variant-cell menucraft-variant-cell-remove';
@@ -2465,11 +2466,90 @@
 		}, 220 );
 	}
 
+	// =================================================== Currency prefix ==
+
+	/**
+	 * Wrap a price input in an input-group with a non-editable currency
+	 * prefix chip. Idempotent: if the input is already wrapped, returns
+	 * the existing wrapper.
+	 */
+	function wrapPriceInput( input ) {
+		if ( ! input ) return input;
+		var parent = input.parentNode;
+		if ( parent && parent.classList && parent.classList.contains( 'menucraft-input-group' ) ) {
+			return parent;
+		}
+
+		var group = document.createElement( 'span' );
+		group.className = 'menucraft-input-group';
+
+		var prefix = document.createElement( 'span' );
+		prefix.className    = 'menucraft-input-group-prefix';
+		prefix.textContent  = settings.currency || '';
+		prefix.setAttribute( 'aria-hidden', 'true' );
+
+		input.classList.add( 'menucraft-input-group-input' );
+
+		if ( parent ) {
+			parent.replaceChild( group, input );
+		}
+		group.appendChild( prefix );
+		group.appendChild( input );
+		return group;
+	}
+
+	function applyCurrencyPrefix( root ) {
+		var scope  = root || document;
+		var inputs = scope.querySelectorAll( '[data-menucraft-price]' );
+		Array.prototype.forEach.call( inputs, wrapPriceInput );
+	}
+
+	// ============================================================ Options ==
+
+	function initOptionsForm() {
+		var form = document.querySelector( '[data-menucraft-options-form]' );
+		if ( ! form ) return;
+
+		rest( 'options' )
+			.then( function ( opts ) {
+				Object.keys( opts || {} ).forEach( function ( key ) {
+					var el = form.querySelector( '[name="' + key + '"]' );
+					if ( el ) el.value = opts[ key ] == null ? '' : String( opts[ key ] );
+				} );
+			} )
+			.catch( function ( err ) {
+				showToast( err.message || i18n.listError || 'Could not load options.', 'error' );
+			} );
+
+		form.addEventListener( 'submit', function ( event ) {
+			event.preventDefault();
+			var payload = collectFormData( form );
+			var saveBtn = form.querySelector( '[data-menucraft-submit]' );
+			setBusy( saveBtn, true );
+			rest( 'options', { method: 'POST', body: payload } )
+				.then( function () {
+					showToast( i18n.saveSuccess || 'Saved.', 'success' );
+				} )
+				.catch( function ( err ) {
+					showToast( err.message || i18n.saveError || 'Save failed.', 'error' );
+				} )
+				.then( function () {
+					setBusy( saveBtn, false );
+				} );
+		} );
+	}
+
 	// =========================================================== Boot ===
 
-	if ( document.readyState === 'loading' ) {
-		document.addEventListener( 'DOMContentLoaded', initLists );
-	} else {
+	function boot() {
+		applyCurrencyPrefix( document );
 		initLists();
+		initOptionsForm();
+	}
+
+	if ( document.readyState === 'loading' ) {
+		document.addEventListener( 'DOMContentLoaded', boot );
+	} else {
+		boot();
 	}
 }() );

@@ -1418,3 +1418,73 @@ body.menucraft-offcanvas-open {
 	color: #4b5563;
 	font-size: 13px;
 }
+
+/* Currency input-group — non-editable prefix chip + numeric field.
+ * Matches the plugin's border/focus tokens, no Bootstrap. */
+
+.menucraft-input-group {
+	align-items: stretch;
+	background: #ffffff;
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	box-sizing: border-box;
+	display: inline-flex;
+	overflow: hidden;
+	width: 100%;
+}
+
+.menucraft-input-group:focus-within {
+	border-color: #3858e9;
+	box-shadow: 0 0 0 2px rgba( 56, 88, 233, 0.2 );
+}
+
+.menucraft-input-group-prefix {
+	align-items: center;
+	background: #f3f4f6;
+	border-right: 1px solid #d1d5db;
+	color: #6b7280;
+	display: inline-flex;
+	font-size: 14px;
+	padding: 0 10px;
+	pointer-events: none;
+	user-select: none;
+	white-space: nowrap;
+}
+
+.menucraft-input-group-input {
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	flex: 1 1 auto;
+	font-size: 14px;
+	min-width: 0;
+	outline: none !important;
+	padding: 6px 10px;
+	width: auto;
+}
+
+.menucraft-input-group-input:focus {
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	outline: none !important;
+}
+
+/* Filter range: both inputs are wrapped in input-groups now; keep them
+ * inline with a dash in between. */
+.menucraft-filter-range .menucraft-input-group {
+	flex: 1 1 0;
+}
+
+/* Options-form footer + narrow currency input */
+
+.menucraft-options-form .menucraft-input-narrow {
+	max-width: 160px;
+}
+
+.menucraft-form-footer {
+	border-top: 1px solid #e5e7eb;
+	margin-top: 16px;
+	padding-top: 16px;
+	text-align: right;
+}

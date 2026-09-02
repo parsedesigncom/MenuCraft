@@ -54,6 +54,84 @@ class MenuCraft_REST {
 		self::register_allergen_routes();
 		self::register_item_routes();
 		self::register_offer_routes();
+		self::register_options_routes();
+	}
+
+	/**
+	 * Options that admins may read/write via REST. Any key not listed here
+	 * is silently ignored on write and omitted on read.
+	 *
+	 * Each entry: 'default' + 'sanitize' callable.
+	 *
+	 * @return array<string,array<string,mixed>>
+	 */
+	private static function editable_options() {
+		return array(
+			'currency' => array(
+				'default'  => '€',
+				'sanitize' => 'sanitize_text_field',
+			),
+		);
+	}
+
+	/**
+	 * Register /options routes.
+	 */
+	private static function register_options_routes() {
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/options',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( __CLASS__, 'list_options' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( __CLASS__, 'save_options' ),
+					'permission_callback' => array( __CLASS__, 'permission_manage' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * GET /options — return the current hash of all editable options.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function list_options() {
+		$out = array();
+		foreach ( self::editable_options() as $key => $spec ) {
+			$out[ $key ] = MenuCraft_Options::get( $key, $spec['default'] );
+		}
+		return new WP_REST_Response( $out, 200 );
+	}
+
+	/**
+	 * POST /options — partial update. Body is a hash of option key → value.
+	 * Unknown keys are ignored; every value is sanitized per the whitelist.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response
+	 */
+	public static function save_options( WP_REST_Request $request ) {
+		$body = $request->get_json_params();
+		if ( ! is_array( $body ) ) {
+			$body = $request->get_body_params();
+		}
+		$editable = self::editable_options();
+
+		foreach ( $editable as $key => $spec ) {
+			if ( ! array_key_exists( $key, $body ) ) {
+				continue;
+			}
+			$sanitized = call_user_func( $spec['sanitize'], $body[ $key ] );
+			MenuCraft_Options::update( $key, $sanitized );
+		}
+
+		return self::list_options();
 	}
 
 	/**

@@ -92,7 +92,7 @@ class MenuCraft_Admin {
 			array(
 				'restUrl'   => esc_url_raw( rest_url( 'menucraft/v1/' ) ),
 				'restNonce' => wp_create_nonce( 'wp_rest' ),
-				'currency'  => '€',
+				'currency'  => (string) MenuCraft_Options::get( 'currency', '€' ),
 				'i18n'      => array(
 					'saving'          => __( 'Saving…', 'menucraft' ),
 					'saveSuccess'     => __( 'Saved.', 'menucraft' ),
@@ -234,7 +234,7 @@ class MenuCraft_Admin {
 			__( 'Options', 'menucraft' ),
 			'manage_options',
 			'menucraft-options',
-			array( $this, 'render_placeholder' )
+			array( $this, 'render_options_page' )
 		);
 
 		$this->page_hooks[] = add_submenu_page(
@@ -335,6 +335,17 @@ class MenuCraft_Admin {
 		}
 
 		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-offers.php';
+	}
+
+	/**
+	 * Render the Options admin screen.
+	 */
+	public function render_options_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		require MENUCRAFT_PLUGIN_DIR . 'admin/partials/menucraft-admin-options.php';
 	}
 
 	/**

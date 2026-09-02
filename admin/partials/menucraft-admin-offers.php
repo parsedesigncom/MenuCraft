@@ -93,12 +93,14 @@ defined( 'ABSPATH' ) || exit;
 									step="0.01"
 									min="0"
 									data-menucraft-filter="price_min"
+									data-menucraft-price
 									placeholder="<?php esc_attr_e( 'From', 'menucraft' ); ?>">
 								<span aria-hidden="true">–</span>
 								<input type="number"
 									step="0.01"
 									min="0"
 									data-menucraft-filter="price_max"
+									data-menucraft-price
 									placeholder="<?php esc_attr_e( 'To', 'menucraft' ); ?>">
 							</div>
 						</div>
@@ -214,6 +216,7 @@ defined( 'ABSPATH' ) || exit;
 							step="0.01"
 							min="0"
 							required
+							data-menucraft-price
 							placeholder="0.00">
 						<p class="menucraft-field-help">
 							<?php esc_html_e( 'One fixed price for the whole offer, regardless of the number of items.', 'menucraft' ); ?>

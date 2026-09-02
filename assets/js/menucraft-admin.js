@@ -2539,6 +2539,23 @@
 		} );
 	}
 
+	// ========================================================= Accordion ==
+
+	// One-open-at-a-time behaviour for [data-menucraft-accordion] blocks.
+	// Uses the `toggle` event on <details>; that event doesn't bubble, so
+	// we listen in the capture phase.
+	document.addEventListener( 'toggle', function ( event ) {
+		var d = event.target;
+		if ( ! d || 'DETAILS' !== d.tagName ) return;
+		var group = d.closest( '[data-menucraft-accordion]' );
+		if ( ! group ) return;
+		if ( ! d.open ) return;
+		var siblings = group.querySelectorAll( ':scope > details' );
+		Array.prototype.forEach.call( siblings, function ( s ) {
+			if ( s !== d && s.open ) s.open = false;
+		} );
+	}, true );
+
 	// =========================================================== Boot ===
 
 	function boot() {

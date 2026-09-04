@@ -7,13 +7,26 @@
  *
  * Available variables (extracted by MenuCraft_Public::render_group_shortcode):
  *   $source_type  string             'category' | 'tag' | ''
- *   $source       array|null         The resolved category/tag row, or null
- *                                    when no valid source was picked.
+ *   $source       array|null         Resolved category/tag row, or null.
  *   $items        array<int,array>   Active items in that group.
- *   $allergens    array<int,array>   Allergen map keyed by id (for legend + item codes).
- *   $tags         array<int,array>   Tag map keyed by id (for pill labels on items).
+ *   $allergens    array<int,array>   Allergen map keyed by id.
+ *   $tags         array<int,array>   Tag map keyed by id.
  *   $config       array              Normalised shortcode config.
  *   $atts         array              Raw shortcode attributes.
+ *
+ * Hook overview:
+ *   Filter  menucraft_group_shortcode_html               ($html, $context)
+ *   Filter  menucraft_group_shortcode_source             ($source, $type, $ref)
+ *   Filter  menucraft_group_shortcode_items              ($items, $type, $source_id)
+ *   Filter  menucraft_group_shortcode_header_html        ($html, $source, $config)
+ *   Filter  menucraft_group_shortcode_items_html         ($html, $items)
+ *   Filter  menucraft_group_shortcode_allergens_legend_html ($html, $allergens)
+ *   Filter  menucraft_shortcode_item_html                ($html, $item, …)  reused per item
+ *   Action  menucraft_before_group_shortcode / _after_group_shortcode ($context)
+ *   Action  menucraft_before_group_header  / _after_group_header       ($source, $config)
+ *   Action  menucraft_before_items         / _after_items               ($items)
+ *   Action  menucraft_before_item          / _after_item                ($item, $config)  reused per item
+ *   Action  menucraft_before_allergens_legend / _after_allergens_legend ($allergens)
  *
  * @package MenuCraft
  */
@@ -32,27 +45,118 @@ $source_media = ( $source && ! empty( $source['media_id'] ) )
 	? wp_get_attachment_image_url( (int) $source['media_id'], 'large' )
 	: '';
 
+/**
+ * Filter: replace the hero header HTML entirely. Return '' to keep default.
+ *
+ * @param string                   $html   Empty by default.
+ * @param array<string,mixed>|null $source Resolved source row.
+ * @param array<string,mixed>      $config Normalised config.
+ */
+$header_override = apply_filters( 'menucraft_group_shortcode_header_html', '', $source, $config );
+
 $header_html = '';
 if ( ! empty( $config['show_header'] ) && $source ) {
-	$header_html .= '<header class="menucraft-group-header">';
-	if ( $source_media && ! $collapsed ) {
-		$header_html .= '<div class="menucraft-group-header-media"><img src="' . esc_url( $source_media ) . '" alt="' . esc_attr( $source_name ) . '" loading="lazy"></div>';
+	if ( is_string( $header_override ) && '' !== $header_override ) {
+		$header_html = $header_override;
+	} else {
+		$header_html .= '<header class="menucraft-group-header">';
+		if ( $source_media && ! $collapsed ) {
+			$header_html .= '<div class="menucraft-group-header-media"><img src="' . esc_url( $source_media ) . '" alt="' . esc_attr( $source_name ) . '" loading="lazy"></div>';
+		}
+		$header_html .= '<div class="menucraft-group-header-body">';
+		$header_html .= '<h2 class="menucraft-group-title">' . esc_html( $source_name ) . '</h2>';
+		if ( '' !== $source_desc ) {
+			$header_html .= '<p class="menucraft-group-desc">' . esc_html( $source_desc ) . '</p>';
+		}
+		$header_html .= '</div>';
+		$header_html .= '</header>';
 	}
-	$header_html .= '<div class="menucraft-group-header-body">';
-	$header_html .= '<h2 class="menucraft-group-title">' . esc_html( $source_name ) . '</h2>';
-	if ( '' !== $source_desc ) {
-		$header_html .= '<p class="menucraft-group-desc">' . esc_html( $source_desc ) . '</p>';
-	}
-	$header_html .= '</div>';
-	$header_html .= '</header>';
 }
 
-// Collapsed header includes the image in the expanded content instead of
-// the header, so users first see just the teaser text.
+// Collapsed mode places the image in the expanded content, not the header.
 $expanded_media_html = '';
 if ( $collapsed && $source_media && ! empty( $config['show_header'] ) ) {
 	$expanded_media_html = '<div class="menucraft-group-expanded-media"><img src="' . esc_url( $source_media ) . '" alt="' . esc_attr( $source_name ) . '" loading="lazy"></div>';
 }
+
+/**
+ * Filter: replace the items list HTML entirely. Return '' to keep default.
+ *
+ * @param string $html
+ * @param array  $items
+ */
+$items_override = apply_filters( 'menucraft_group_shortcode_items_html', '', $items );
+
+/**
+ * Filter: replace the allergen legend HTML entirely. Return '' to keep default.
+ *
+ * @param string $html
+ * @param array  $allergens
+ */
+$legend_override = apply_filters( 'menucraft_group_shortcode_allergens_legend_html', '', $allergens );
+
+// Render helpers — small closures so the collapsed / expanded branches
+// don't duplicate the item-list and legend markup.
+$render_header = function () use ( $source, $header_html, $config ) {
+	if ( '' === $header_html ) {
+		return;
+	}
+	/**
+	 * Action: right before the group hero header.
+	 *
+	 * @param array<string,mixed> $source
+	 * @param array<string,mixed> $config
+	 */
+	do_action( 'menucraft_before_group_header', $source, $config );
+
+	echo $header_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+	/**
+	 * Action: right after the group hero header.
+	 *
+	 * @param array<string,mixed> $source
+	 * @param array<string,mixed> $config
+	 */
+	do_action( 'menucraft_after_group_header', $source, $config );
+};
+
+$render_items = function () use ( $items, $items_override, $allergens, $tags, $config ) {
+	if ( is_string( $items_override ) && '' !== $items_override ) {
+		echo $items_override; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		return;
+	}
+	do_action( 'menucraft_before_items', $items );
+	echo '<div class="menucraft-items" data-menucraft-items>';
+	if ( empty( $items ) ) {
+		echo '<p class="menucraft-empty">' . esc_html__( 'No menu items to display yet.', 'menucraft' ) . '</p>';
+	} else {
+		foreach ( $items as $item ) {
+			echo MenuCraft_Public::render_item( $item, $allergens, $tags, $config ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+	}
+	echo '</div>';
+	do_action( 'menucraft_after_items', $items );
+};
+
+$render_legend = function () use ( $allergens, $legend_override, $config ) {
+	if ( empty( $config['show_allergens_legend'] ) || empty( $allergens ) ) {
+		return;
+	}
+	if ( is_string( $legend_override ) && '' !== $legend_override ) {
+		echo $legend_override; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		return;
+	}
+	do_action( 'menucraft_before_allergens_legend', $allergens );
+	echo '<div class="menucraft-allergens-legend" data-menucraft-allergens-legend>';
+	echo '<span class="menucraft-allergens-legend-label">' . esc_html__( 'Allergens', 'menucraft' ) . ':</span>';
+	echo '<span class="menucraft-allergens-legend-list">';
+	foreach ( $allergens as $allergen ) {
+		echo '<span class="menucraft-allergens-legend-item"><strong>' . esc_html( $allergen['code'] ) . '</strong> ' . esc_html( $allergen['name'] ) . '</span>';
+	}
+	echo '</span>';
+	echo '</div>';
+	do_action( 'menucraft_after_allergens_legend', $allergens );
+};
 ?>
 <div class="menucraft menucraft-group menucraft-image-<?php echo esc_attr( $image_pos ); ?><?php echo esc_attr( $grid_class ); ?><?php echo esc_attr( $custom_class ); ?><?php echo $collapsed ? ' menucraft-group--collapsible' : ''; ?>"
 	id="<?php echo esc_attr( $instance_id ); ?>"
@@ -63,75 +167,26 @@ if ( $collapsed && $source_media && ! empty( $config['show_header'] ) ) {
 	<?php endif; ?>
 
 	<?php if ( ! $source ) : ?>
-		<p class="menucraft-empty">
-			<?php esc_html_e( 'No matching category or tag found.', 'menucraft' ); ?>
-		</p>
+		<p class="menucraft-empty"><?php esc_html_e( 'No matching category or tag found.', 'menucraft' ); ?></p>
 	<?php elseif ( $collapsed ) : ?>
-		<?php // Collapsible mode: <details> element for zero-JS toggle behaviour. ?>
 		<details class="menucraft-group-details">
 			<summary class="menucraft-group-summary">
-				<?php echo $header_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<?php $render_header(); ?>
 				<span class="menucraft-group-summary-icon" aria-hidden="true"></span>
 			</summary>
 			<div class="menucraft-group-content">
 				<?php echo $expanded_media_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-				<?php do_action( 'menucraft_before_items', $items ); ?>
-				<div class="menucraft-items" data-menucraft-items>
-					<?php if ( empty( $items ) ) : ?>
-						<p class="menucraft-empty"><?php esc_html_e( 'No menu items to display yet.', 'menucraft' ); ?></p>
-					<?php else : ?>
-						<?php foreach ( $items as $item ) : ?>
-							<?php echo MenuCraft_Public::render_item( $item, $allergens, $tags, $config ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-						<?php endforeach; ?>
-					<?php endif; ?>
-				</div>
-				<?php do_action( 'menucraft_after_items', $items ); ?>
-
-				<?php if ( ! empty( $config['show_allergens_legend'] ) && ! empty( $allergens ) ) : ?>
-					<div class="menucraft-allergens-legend" data-menucraft-allergens-legend>
-						<span class="menucraft-allergens-legend-label"><?php esc_html_e( 'Allergens', 'menucraft' ); ?>:</span>
-						<span class="menucraft-allergens-legend-list">
-							<?php foreach ( $allergens as $allergen ) : ?>
-								<span class="menucraft-allergens-legend-item">
-									<strong><?php echo esc_html( $allergen['code'] ); ?></strong>
-									<?php echo esc_html( $allergen['name'] ); ?>
-								</span>
-							<?php endforeach; ?>
-						</span>
-					</div>
-				<?php endif; ?>
+				<?php $render_items(); ?>
+				<?php $render_legend(); ?>
 			</div>
 		</details>
 	<?php else : ?>
-		<?php echo $header_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		<?php do_action( 'menucraft_before_items', $items ); ?>
-		<div class="menucraft-items" data-menucraft-items>
-			<?php if ( empty( $items ) ) : ?>
-				<p class="menucraft-empty"><?php esc_html_e( 'No menu items to display yet.', 'menucraft' ); ?></p>
-			<?php else : ?>
-				<?php foreach ( $items as $item ) : ?>
-					<?php echo MenuCraft_Public::render_item( $item, $allergens, $tags, $config ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-				<?php endforeach; ?>
-			<?php endif; ?>
-		</div>
-		<?php do_action( 'menucraft_after_items', $items ); ?>
-
-		<?php if ( ! empty( $config['show_allergens_legend'] ) && ! empty( $allergens ) ) : ?>
-			<div class="menucraft-allergens-legend" data-menucraft-allergens-legend>
-				<span class="menucraft-allergens-legend-label"><?php esc_html_e( 'Allergens', 'menucraft' ); ?>:</span>
-				<span class="menucraft-allergens-legend-list">
-					<?php foreach ( $allergens as $allergen ) : ?>
-						<span class="menucraft-allergens-legend-item">
-							<strong><?php echo esc_html( $allergen['code'] ); ?></strong>
-							<?php echo esc_html( $allergen['name'] ); ?>
-						</span>
-					<?php endforeach; ?>
-				</span>
-			</div>
-		<?php endif; ?>
+		<?php $render_header(); ?>
+		<?php $render_items(); ?>
+		<?php $render_legend(); ?>
 	<?php endif; ?>
 
-	<?php // ---- Details modal (populated by JS, same shell for items) ---- ?>
+	<?php // ---- Details modal (populated by JS) ---- ?>
 	<div class="menucraft-modal"
 		id="<?php echo esc_attr( $instance_id ); ?>-modal"
 		role="dialog"

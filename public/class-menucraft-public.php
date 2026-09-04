@@ -944,6 +944,18 @@ class MenuCraft_Public {
 
 		$source = ( '' !== $source_type ) ? self::resolve_group_source( $source_type, $source_ref ) : null;
 
+		/**
+		 * Filter: replace or modify the resolved source (category or tag) row
+		 * before it flows into the template. Return null to render the
+		 * "no source" empty state, or return a fully-shaped array to render
+		 * a custom-loaded taxonomy.
+		 *
+		 * @param array<string,mixed>|null $source      Resolved row or null.
+		 * @param string                   $source_type 'category' | 'tag' | ''.
+		 * @param string                   $source_ref  Original slug/id string.
+		 */
+		$source = apply_filters( 'menucraft_group_shortcode_source', $source, $source_type, $source_ref );
+
 		wp_enqueue_style( $this->plugin_name . '-public' );
 		wp_enqueue_script( $this->plugin_name . '-public' );
 

@@ -262,6 +262,39 @@ defined( 'ABSPATH' ) || exit;
 					</div>
 				</details>
 
+				<?php // ---------- Offers block ---------- ?>
+				<details class="menucraft-accordion-item">
+					<summary class="menucraft-accordion-summary">
+						<span class="menucraft-accordion-chevron" aria-hidden="true"></span>
+						<span class="menucraft-accordion-title"><?php esc_html_e( 'Offers block (Gutenberg)', 'menucraft' ); ?></span>
+					</summary>
+					<div class="menucraft-accordion-body">
+
+						<h3><?php esc_html_e( 'What is the offers block?', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'The visual companion to the offers shortcode.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'It does the same thing but with settings in the sidebar instead of shortcode attributes.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'How to add', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Open a page or post in the block editor.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Click the plus button, search for:', 'menucraft' ); ?> <code>MenuCraft</code></p>
+						<p><?php esc_html_e( 'Pick the block named:', 'menucraft' ); ?> <strong><?php esc_html_e( 'MenuCraft Offers', 'menucraft' ); ?></strong></p>
+
+						<h3><?php esc_html_e( 'Sidebar panels', 'menucraft' ); ?></h3>
+						<ul>
+							<li><?php esc_html_e( 'Content & layout: which offers, image position, validity dates toggle.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Card vs. modal: choose per piece where description, items and conditions live.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Grid layout: turn on and set the columns per screen width.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Alignment & size: font size, card content alignment, border radius.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Colors: container, cards, offer details — each with its own picker set.', 'menucraft' ); ?></li>
+						</ul>
+
+						<h3><?php esc_html_e( 'Same content as the shortcode', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Under the hood the block uses [menucraft_offers].', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Use whichever is easier: the block for visual editing, the shortcode inside page builders or code.', 'menucraft' ); ?></p>
+
+					</div>
+				</details>
+
 			</div>
 		</div>
 

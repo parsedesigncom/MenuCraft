@@ -455,18 +455,28 @@
 	height: 100%;
 }
 
-/* Composition list inside an offer card ("2× Pizza (Small)") */
+/* Composition list inside an offer card ("2× Pizza (Small)").
+ * list-style is off — the bullet is a CSS ::before character on the li
+ * itself so it moves with the text when the card content is centered
+ * or right-aligned via the block's Card content alignment setting. */
 .menucraft-offer-lines {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
-	list-style: disc;
-	margin: 6px 0 0 18px;
+	list-style: none;
+	margin: 10px 0 0;
 	padding: 0;
 }
 
 .menucraft-offer-line {
 	font-size: 0.95em;
+}
+
+.menucraft-offer-line::before {
+	content: "\2022"; /* • */
+	display: inline-block;
+	margin-right: 6px;
+	opacity: 0.55;
 }
 
 .menucraft-offer-validity {
@@ -487,9 +497,16 @@
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
-	list-style: disc;
-	margin: 0 0 12px 20px;
+	list-style: none;
+	margin: 0 0 12px;
 	padding: 0;
+}
+
+.menucraft-modal-offer-lines li::before {
+	content: "\2022";
+	display: inline-block;
+	margin-right: 6px;
+	opacity: 0.55;
 }
 
 .menucraft-modal-offer-conditions {

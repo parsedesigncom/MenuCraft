@@ -1,0 +1,75 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "menucraft/offers",
+	"title": "MenuCraft Offers",
+	"category": "menucraft",
+	"icon": "tickets-alt",
+	"description": "Display your MenuCraft offers with optional grid layout, alignment, colors and card configuration.",
+	"keywords": [ "offers", "menucraft", "promotion", "deals" ],
+	"textdomain": "menucraft",
+	"attributes": {
+		"image": {
+			"type": "string",
+			"default": "left",
+			"enum": [ "left", "right", "top" ]
+		},
+		"columns":    { "type": "string", "default": "" },
+		"validity": {
+			"type": "string",
+			"default": "preview",
+			"enum": [ "preview", "all" ]
+		},
+		"showItems": {
+			"type": "string",
+			"default": "inline",
+			"enum": [ "inline", "modal", "hide" ]
+		},
+		"showDesc": {
+			"type": "string",
+			"default": "inline",
+			"enum": [ "inline", "modal", "hide" ]
+		},
+		"showDates": {
+			"type": "string",
+			"default": "show",
+			"enum": [ "show", "hide" ]
+		},
+		"conditions": {
+			"type": "string",
+			"default": "modal",
+			"enum": [ "modal", "inline", "hide" ]
+		},
+
+		"fontScale": {
+			"type": "string",
+			"default": "medium",
+			"enum": [ "small", "medium", "large" ]
+		},
+		"itemAlign": {
+			"type": "string",
+			"default": "left",
+			"enum": [ "left", "center", "right" ]
+		},
+		"borderRadius":     { "type": "string", "default": "" },
+
+		"bgColor":          { "type": "string", "default": "" },
+		"textColor":        { "type": "string", "default": "" },
+		"cardBg":           { "type": "string", "default": "" },
+		"cardBorder":       { "type": "string", "default": "" },
+		"cardTitleColor":   { "type": "string", "default": "" },
+		"cardDescColor":    { "type": "string", "default": "" },
+		"cardPriceColor":   { "type": "string", "default": "" },
+		"linesColor":       { "type": "string", "default": "" },
+		"validityColor":    { "type": "string", "default": "" },
+		"conditionsColor":  { "type": "string", "default": "" }
+	},
+	"supports": {
+		"className": true,
+		"html": false,
+		"align": [ "wide", "full" ]
+	},
+	"editorScript": "file:./index.js",
+	"style":       "menucraft-public",
+	"viewScript":  "menucraft-public"
+}

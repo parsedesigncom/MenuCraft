@@ -381,20 +381,20 @@ class MenuCraft_Public {
 			}
 		}
 
-		$all  = MenuCraft_Category_Repository::all();
-		$rows = array_values(
-			array_filter(
-				$all,
-				function ( $row ) use ( $used ) {
-					return ! empty( $row['is_active'] ) && isset( $used[ (int) $row['id'] ] );
-				}
-			)
-		);
+		// Keyed by id so per-item templates can do $categories[$id]
+		// lookups. `foreach` iterates values in insertion order, which
+		// remains sort_order because Repository::all() already sorts.
+		$rows = array();
+		foreach ( MenuCraft_Category_Repository::all() as $row ) {
+			if ( ! empty( $row['is_active'] ) && isset( $used[ (int) $row['id'] ] ) ) {
+				$rows[ (int) $row['id'] ] = $row;
+			}
+		}
 
 		/**
 		 * Filter: modify the category set shown in the filter bar.
 		 *
-		 * @param array<int,array<string,mixed>> $rows  Filtered categories.
+		 * @param array<int,array<string,mixed>> $rows  Filtered categories, keyed by id.
 		 * @param array<int,array<string,mixed>> $items Visible items.
 		 */
 		return apply_filters( 'menucraft_shortcode_categories', $rows, $items );
@@ -404,7 +404,7 @@ class MenuCraft_Public {
 	 * Same idea as collect_categories() for tags.
 	 *
 	 * @param array<int,array<string,mixed>> $items Visible items.
-	 * @return array<int,array<string,mixed>>
+	 * @return array<int,array<string,mixed>> Tags keyed by id.
 	 */
 	private function collect_tags( array $items ) {
 		$used = array();
@@ -414,20 +414,17 @@ class MenuCraft_Public {
 			}
 		}
 
-		$all  = MenuCraft_Tag_Repository::all();
-		$rows = array_values(
-			array_filter(
-				$all,
-				function ( $row ) use ( $used ) {
-					return ! empty( $row['is_active'] ) && isset( $used[ (int) $row['id'] ] );
-				}
-			)
-		);
+		$rows = array();
+		foreach ( MenuCraft_Tag_Repository::all() as $row ) {
+			if ( ! empty( $row['is_active'] ) && isset( $used[ (int) $row['id'] ] ) ) {
+				$rows[ (int) $row['id'] ] = $row;
+			}
+		}
 
 		/**
 		 * Filter: modify the tag set shown in the filter bar.
 		 *
-		 * @param array<int,array<string,mixed>> $rows  Filtered tags.
+		 * @param array<int,array<string,mixed>> $rows  Filtered tags, keyed by id.
 		 * @param array<int,array<string,mixed>> $items Visible items.
 		 */
 		return apply_filters( 'menucraft_shortcode_tags', $rows, $items );

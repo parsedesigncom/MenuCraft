@@ -28,8 +28,95 @@ defined( 'ABSPATH' ) || exit;
 		<div class="menucraft-page-body">
 			<div class="menucraft-accordion" data-menucraft-accordion>
 
+				<?php // ---------- Onboarding / Getting started ---------- ?>
+				<details class="menucraft-accordion-item">
+					<summary class="menucraft-accordion-summary">
+						<span class="menucraft-accordion-chevron" aria-hidden="true"></span>
+						<span class="menucraft-accordion-title"><?php esc_html_e( 'Getting started', 'menucraft' ); ?></span>
+					</summary>
+					<div class="menucraft-accordion-body">
+
+						<h3><?php esc_html_e( 'What this plugin does', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'MenuCraft lets you build the menu of a restaurant, café or bar.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'You add items with a price, image, allergens and tags.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Then you show the menu on any page with a shortcode or a block.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'The best order to set things up', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'You can create things in any order, but this order is the easiest:', 'menucraft' ); ?></p>
+						<ol>
+							<li><?php esc_html_e( 'Allergens', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Categories', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Tags', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Items', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Offers', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Options', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Put the menu on a page (shortcode or block)', 'menucraft' ); ?></li>
+						</ol>
+						<p><?php esc_html_e( 'The reason: items depend on categories, tags and allergens. Offers depend on items.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Step 1 — Allergens', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Small letter codes (A, B, C…) that mark ingredients guests must know about.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Each allergen has a code and a readable name (e.g. G — Gluten).', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Where to find:', 'menucraft' ); ?> <strong><?php esc_html_e( 'MenuCraft → Allergens', 'menucraft' ); ?></strong></p>
+						<p><?php esc_html_e( 'On the frontend the codes appear next to each item title and a small legend at the end of the menu explains them.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Step 2 — Categories', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'The main groups of your menu.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'For example: Starters, Main courses, Desserts, Drinks.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Where to find:', 'menucraft' ); ?> <strong><?php esc_html_e( 'MenuCraft → Categories', 'menucraft' ); ?></strong></p>
+						<p><?php esc_html_e( 'On the frontend every category becomes a filter button that visitors can tap.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Step 3 — Tags', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Extra labels that cross the categories.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'For example: Vegan, Vegetarian, New, Spicy.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Where to find:', 'menucraft' ); ?> <strong><?php esc_html_e( 'MenuCraft → Tags', 'menucraft' ); ?></strong></p>
+						<p><?php esc_html_e( 'On the frontend tags become their own filter buttons and appear as small pills on each item.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Step 4 — Items', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'The actual food and drinks on your menu.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Each item has a name, a short description and a price.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'If the same dish comes in several sizes, add variants (e.g. Small, Medium, Large) with their own prices.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'You can also add an image, a longer description, and assign categories, tags and allergens.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Where to find:', 'menucraft' ); ?> <strong><?php esc_html_e( 'MenuCraft → Items', 'menucraft' ); ?></strong></p>
+
+						<h3><?php esc_html_e( 'Step 5 — Offers (optional)', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'A special deal that combines several items at a fixed total price.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'For example: "Lunch menu — pizza + drink for 9,90 €".', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'You can set start and end dates and add conditions like "from 20€ order value".', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Requires items to exist first.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Where to find:', 'menucraft' ); ?> <strong><?php esc_html_e( 'MenuCraft → Offers', 'menucraft' ); ?></strong></p>
+
+						<h3><?php esc_html_e( 'Step 6 — Options', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Plugin-wide settings.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Right now only the currency symbol lives here (€, $, CHF…).', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Where to find:', 'menucraft' ); ?> <strong><?php esc_html_e( 'MenuCraft → Options', 'menucraft' ); ?></strong></p>
+
+						<h3><?php esc_html_e( 'Step 7 — Show the menu on your site', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Two ways, same result:', 'menucraft' ); ?></p>
+						<ul>
+							<li><?php esc_html_e( 'Shortcode:', 'menucraft' ); ?> <code>[menucraft]</code></li>
+							<li><?php esc_html_e( 'Block: search "MenuCraft Menu" in the block inserter.', 'menucraft' ); ?></li>
+						</ul>
+						<p><?php esc_html_e( 'For a separate offers page:', 'menucraft' ); ?></p>
+						<ul>
+							<li><?php esc_html_e( 'Shortcode:', 'menucraft' ); ?> <code>[menucraft_offers]</code></li>
+							<li><?php esc_html_e( 'Block: search "MenuCraft Offers" in the block inserter.', 'menucraft' ); ?></li>
+						</ul>
+						<p><?php esc_html_e( 'The other sections below explain the attributes and sidebar settings in detail.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Tips for daily use', 'menucraft' ); ?></h3>
+						<ul>
+							<li><?php esc_html_e( 'Turn any item off with the Active toggle instead of deleting it.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Use the filters and search on the Items page to find things fast.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Bulk-edit on the Items page changes many items at once (prices, tags, active state).', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Items that are used in an offer cannot be deleted until the offer is changed.', 'menucraft' ); ?></li>
+						</ul>
+
+					</div>
+				</details>
+
 				<?php // ---------- Shortcode ---------- ?>
-				<details class="menucraft-accordion-item" open>
+				<details class="menucraft-accordion-item">
 					<summary class="menucraft-accordion-summary">
 						<span class="menucraft-accordion-chevron" aria-hidden="true"></span>
 						<span class="menucraft-accordion-title"><?php esc_html_e( 'Shortcode', 'menucraft' ); ?></span>

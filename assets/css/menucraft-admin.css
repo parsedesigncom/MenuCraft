@@ -1740,6 +1740,94 @@ body.menucraft-offcanvas-open {
 	text-align: center;
 }
 
+/* Dashboard — counter tiles */
+
+.menucraft-counters {
+	margin: 0 0 28px;
+}
+
+.menucraft-counters-title {
+	color: #1d2327;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	margin: 0 0 10px;
+	text-transform: uppercase;
+}
+
+.menucraft-counters-grid {
+	display: grid;
+	gap: 14px;
+	grid-template-columns: repeat( auto-fill, minmax( 200px, 1fr ) );
+}
+
+.menucraft-counter {
+	background: #ffffff;
+	border: 1px solid #e5e7eb;
+	border-radius: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 22px 20px;
+	position: relative;
+	overflow: hidden;
+	transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.menucraft-counter::before {
+	background: linear-gradient( 135deg, rgba( 56, 88, 233, 0.06 ) 0%, transparent 60% );
+	content: '';
+	inset: 0;
+	pointer-events: none;
+	position: absolute;
+}
+
+.menucraft-counter:hover {
+	border-color: #c7d2fe;
+	box-shadow: 0 6px 18px rgba( 0, 0, 0, 0.05 );
+	transform: translateY( -1px );
+}
+
+.menucraft-counter-value {
+	color: #1d2327;
+	font-size: 42px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	line-height: 1;
+	position: relative;
+}
+
+.menucraft-counter-label {
+	color: #6b7280;
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	position: relative;
+	text-transform: uppercase;
+}
+
+/* Primary tiles (Offers section) — accent color to draw the eye first. */
+
+.menucraft-counter--primary {
+	background: linear-gradient( 135deg, #eef2ff 0%, #ffffff 60% );
+	border-color: #c7d2fe;
+}
+
+.menucraft-counter--primary .menucraft-counter-value {
+	color: #3730a3;
+}
+
+/* Warn tile (used when "items without image" > 0) — subtle amber accent. */
+
+.menucraft-counter--warn {
+	background: linear-gradient( 135deg, #fef3c7 0%, #ffffff 60% );
+	border-color: #fde68a;
+}
+
+.menucraft-counter--warn .menucraft-counter-value {
+	color: #b45309;
+}
+
 .menucraft-default-badge {
 	background: #eef2ff;
 	border: 1px solid #c7d2fe;

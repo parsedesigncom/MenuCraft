@@ -2900,11 +2900,46 @@
 
 	// =========================================================== Boot ===
 
+	// -------- Dashboard counter animation --------
+	// Any element with data-menucraft-counter="N" animates its textContent
+	// from 0 to N (integer) with an ease-out curve. Cheap, dependency-free.
+	function animateCounters() {
+		var els = document.querySelectorAll( '[data-menucraft-counter]' );
+		if ( ! els.length ) return;
+
+		Array.prototype.forEach.call( els, function ( el ) {
+			var target = parseInt( el.getAttribute( 'data-menucraft-counter' ), 10 );
+			if ( isNaN( target ) || target < 0 ) {
+				el.textContent = '0';
+				return;
+			}
+			if ( 0 === target ) {
+				el.textContent = '0';
+				return;
+			}
+			// Duration scales gently with the target so tiny numbers don't
+			// feel sluggish and huge ones aren't over in a blink.
+			var duration = Math.min( 1200, 400 + target * 6 );
+			var start    = null;
+
+			function step( now ) {
+				if ( null === start ) start = now;
+				var progress = Math.min( ( now - start ) / duration, 1 );
+				// ease-out cubic
+				var eased = 1 - Math.pow( 1 - progress, 3 );
+				el.textContent = String( Math.round( target * eased ) );
+				if ( progress < 1 ) requestAnimationFrame( step );
+			}
+			requestAnimationFrame( step );
+		} );
+	}
+
 	function boot() {
 		applyCurrencyPrefix( document );
 		initSelects();
 		initLists();
 		initOptionsForm();
+		animateCounters();
 	}
 
 	if ( document.readyState === 'loading' ) {

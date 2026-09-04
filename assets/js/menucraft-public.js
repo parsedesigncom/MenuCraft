@@ -38,14 +38,29 @@
 		var chips = root.querySelectorAll( CHIP_SEL );
 		Array.prototype.forEach.call( chips, function ( chip ) {
 			chip.addEventListener( 'click', function () {
-				chip.classList.toggle( 'is-active' );
+				// Single-select per group: clicking a chip deactivates
+				// every other chip in the SAME filter group first, then
+				// toggles this one on (or off, when it was already
+				// active). AND across groups still holds because
+				// applyFilters intersects per-group active sets.
+				var wasActive = chip.classList.contains( 'is-active' );
+				var kind      = chip.getAttribute( 'data-menucraft-filter' );
+				var siblings  = root.querySelectorAll( '[data-menucraft-filter="' + kind + '"]' );
+				Array.prototype.forEach.call( siblings, function ( s ) {
+					s.classList.remove( 'is-active' );
+				} );
+				if ( ! wasActive ) {
+					chip.classList.add( 'is-active' );
+				}
 				applyFilters( root );
 			} );
 		} );
 
-		// Pre-activate any chip marked as default (currently only used by
-		// the category filter). Auto-applies the filter so the initial
-		// view is focused instead of listing every item.
+		// Pre-activate the default chip (currently only used by the
+		// category filter). Single-default is enforced server-side so
+		// there is at most one such chip per group. Auto-applies the
+		// filter so the initial view is focused instead of listing
+		// every item.
 		var defaults = root.querySelectorAll( '[data-menucraft-default]' );
 		if ( defaults.length ) {
 			Array.prototype.forEach.call( defaults, function ( d ) {

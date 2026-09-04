@@ -51,6 +51,7 @@ class MenuCraft_Public {
 	public function register_shortcodes() {
 		add_shortcode( 'menucraft', array( $this, 'render_shortcode' ) );
 		add_shortcode( 'menucraft_offers', array( $this, 'render_offers_shortcode' ) );
+		add_shortcode( 'menucraft_group', array( $this, 'render_group_shortcode' ) );
 	}
 
 	/**
@@ -882,6 +883,229 @@ class MenuCraft_Public {
 			__( 'Valid until %s', 'menucraft' ),
 			$until_h
 		);
+	}
+
+	// ============================================================ Group ==
+
+	/**
+	 * `[menucraft_group]` shortcode entry point.
+	 *
+	 * Focused variant of the menu shortcode: shows every active item that
+	 * belongs to a single category OR a single tag, with the taxonomy's
+	 * own image / name / description as a hero header above the list.
+	 * No filter bar (there's nothing to filter).
+	 *
+	 * Attributes:
+	 *   category="slug-or-id"      Show items from this category. Either category or tag is required.
+	 *   tag="slug-or-id"           Show items from this tag. If both category and tag are set, category wins.
+	 *   image=left|right|top       Per-item image placement. Default left.
+	 *   variants=inline|modal      Where variants render. Default inline.
+	 *   columns="720__1 …"         Grid layout for the item list (same spec as menu shortcode).
+	 *   class="…"                  Extra CSS class on the outer wrapper.
+	 *   allergens_legend=show|hide Toggle the fine-print allergen legend. Default show.
+	 *   show_header=show|hide      Toggle the whole hero header. Default show.
+	 *   collapsed=no|yes           When yes, the group starts collapsed showing only
+	 *                              title + description as a clickable strip; expanding
+	 *                              reveals the image and item list. Default no.
+	 *
+	 * @param array<string,mixed>|string $atts    Shortcode attributes.
+	 * @param string|null                $content Enclosed content (unused).
+	 * @return string
+	 */
+	public function render_group_shortcode( $atts, $content = null ) {
+		unset( $content );
+
+		$atts = shortcode_atts(
+			array(
+				'category'         => '',
+				'tag'              => '',
+				'image'            => 'left',
+				'variants'         => 'inline',
+				'columns'          => '',
+				'class'            => '',
+				'allergens_legend' => 'show',
+				'show_header'      => 'show',
+				'collapsed'        => 'no',
+			),
+			is_array( $atts ) ? $atts : array(),
+			'menucraft_group'
+		);
+
+		// category takes precedence when both are set — one source per instance.
+		$source_type = '';
+		$source_ref  = '';
+		if ( '' !== trim( (string) $atts['category'] ) ) {
+			$source_type = 'category';
+			$source_ref  = (string) $atts['category'];
+		} elseif ( '' !== trim( (string) $atts['tag'] ) ) {
+			$source_type = 'tag';
+			$source_ref  = (string) $atts['tag'];
+		}
+
+		$source = ( '' !== $source_type ) ? self::resolve_group_source( $source_type, $source_ref ) : null;
+
+		wp_enqueue_style( $this->plugin_name . '-public' );
+		wp_enqueue_script( $this->plugin_name . '-public' );
+
+		self::$instance_counter++;
+		$instance_id = 'menucraft-group-' . self::$instance_counter;
+
+		$config = self::normalise_group_atts( $atts, $instance_id );
+
+		$items     = $source ? self::collect_group_items( $source_type, (int) $source['id'] ) : array();
+		$allergens = $this->collect_allergens( $items );
+		$tags      = $this->collect_tags( $items );
+
+		$context = array(
+			'atts'        => $atts,
+			'config'      => $config,
+			'source_type' => $source_type,
+			'source'      => $source,
+			'items'       => $items,
+			'allergens'   => $allergens,
+			'tags'        => $tags,
+		);
+
+		/**
+		 * Filter: fully rewrite the group shortcode output.
+		 *
+		 * @param string              $html    Empty by default.
+		 * @param array<string,mixed> $context source, items, allergens, tags, config, atts.
+		 */
+		$override = apply_filters( 'menucraft_group_shortcode_html', '', $context );
+		if ( is_string( $override ) && '' !== $override ) {
+			return $override;
+		}
+
+		$template = self::locate_template( 'shortcode-group' );
+
+		ob_start();
+		/**
+		 * Action: right before the group shortcode template is included.
+		 *
+		 * @param array<string,mixed> $context Full render context.
+		 */
+		do_action( 'menucraft_before_group_shortcode', $context );
+
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract
+		extract( $context, EXTR_SKIP );
+		include $template;
+
+		/**
+		 * Action: right after the group shortcode template is included.
+		 *
+		 * @param array<string,mixed> $context Full render context.
+		 */
+		do_action( 'menucraft_after_group_shortcode', $context );
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Normalise group shortcode attributes into a config bag.
+	 *
+	 * @param array<string,mixed> $atts        Raw sanitized shortcode atts.
+	 * @param string              $instance_id Unique HTML id for this shortcode call.
+	 * @return array<string,mixed>
+	 */
+	private static function normalise_group_atts( array $atts, $instance_id ) {
+		$image_pos     = in_array( $atts['image'], array( 'left', 'right', 'top' ), true ) ? $atts['image'] : 'left';
+		$variants_mode = in_array( $atts['variants'], array( 'inline', 'modal' ), true ) ? $atts['variants'] : 'inline';
+		$show_header   = 'hide' !== strtolower( (string) $atts['show_header'] );
+		$show_legend   = 'hide' !== strtolower( (string) $atts['allergens_legend'] );
+		$collapsed     = 'yes' === strtolower( (string) $atts['collapsed'] );
+
+		$breakpoints = self::parse_columns_spec( (string) $atts['columns'] );
+		$grid_css    = ! empty( $breakpoints ) ? self::build_grid_css( $instance_id, $breakpoints ) : '';
+
+		$custom_class = '';
+		if ( '' !== trim( (string) $atts['class'] ) ) {
+			$parts = preg_split( '/\s+/', trim( (string) $atts['class'] ) );
+			$clean = array();
+			foreach ( $parts as $p ) {
+				$s = sanitize_html_class( $p );
+				if ( '' !== $s ) {
+					$clean[ $s ] = true;
+				}
+			}
+			$custom_class = implode( ' ', array_keys( $clean ) );
+		}
+
+		return array(
+			'instance_id'          => $instance_id,
+			'image_pos'            => $image_pos,
+			'variants_mode'        => $variants_mode,
+			'grid_enabled'         => ! empty( $breakpoints ),
+			'grid_css'             => $grid_css,
+			'custom_class'         => $custom_class,
+			'show_header'          => $show_header,
+			'show_allergens_legend' => $show_legend,
+			'collapsed'            => $collapsed,
+		);
+	}
+
+	/**
+	 * Resolve a category/tag reference (numeric id or slug) to the hydrated
+	 * row. Returns null when the reference is empty, unknown, or inactive.
+	 *
+	 * @param string $type 'category' | 'tag'.
+	 * @param string $ref  Slug or numeric id.
+	 * @return array<string,mixed>|null
+	 */
+	private static function resolve_group_source( $type, $ref ) {
+		$ref = trim( (string) $ref );
+		if ( '' === $ref ) {
+			return null;
+		}
+		$repo = ( 'category' === $type ) ? 'MenuCraft_Category_Repository' : 'MenuCraft_Tag_Repository';
+		$all  = call_user_func( array( $repo, 'all' ) );
+
+		$is_id = ctype_digit( $ref );
+		foreach ( $all as $row ) {
+			if ( empty( $row['is_active'] ) ) {
+				continue;
+			}
+			if ( $is_id && (int) $ref === (int) $row['id'] ) {
+				return $row;
+			}
+			if ( ! $is_id && $ref === (string) $row['slug'] ) {
+				return $row;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Fetch every active item that belongs to the given category/tag id.
+	 * "Belongs" means the item has that id in its category_ids / tag_ids
+	 * array — an item that lives in several categories still shows up as
+	 * long as one of them is the requested one.
+	 *
+	 * @param string $type      'category' | 'tag'.
+	 * @param int    $source_id The category/tag id.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private static function collect_group_items( $type, $source_id ) {
+		$field = ( 'category' === $type ) ? 'category_ids' : 'tag_ids';
+		$out   = array();
+		foreach ( MenuCraft_Item_Repository::all() as $item ) {
+			if ( empty( $item['is_active'] ) ) {
+				continue;
+			}
+			$ids = array_map( 'intval', (array) ( isset( $item[ $field ] ) ? $item[ $field ] : array() ) );
+			if ( in_array( (int) $source_id, $ids, true ) ) {
+				$out[] = $item;
+			}
+		}
+
+		/**
+		 * Filter: modify or replace the items list before the group renders.
+		 *
+		 * @param array<int,array<string,mixed>> $out       Filtered items.
+		 * @param string                         $type      'category' | 'tag'.
+		 * @param int                            $source_id The category/tag id.
+		 */
+		return apply_filters( 'menucraft_group_shortcode_items', $out, $type, $source_id );
 	}
 
 	/**

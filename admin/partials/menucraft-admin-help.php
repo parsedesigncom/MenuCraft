@@ -286,6 +286,93 @@ defined( 'ABSPATH' ) || exit;
 					</div>
 				</details>
 
+				<?php // ---------- Group shortcode ---------- ?>
+				<details class="menucraft-accordion-item">
+					<summary class="menucraft-accordion-summary">
+						<span class="menucraft-accordion-chevron" aria-hidden="true"></span>
+						<span class="menucraft-accordion-title"><?php esc_html_e( 'Group shortcode (one category or tag)', 'menucraft' ); ?></span>
+					</summary>
+					<div class="menucraft-accordion-body">
+
+						<h3><?php esc_html_e( 'What is the group shortcode?', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Shows every item that belongs to one category or one tag.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Perfect for a dedicated "Drinks" page or a "Vegan" list.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'On top of the list you see the category or tag as a hero header: image, name, description — whatever you have defined.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'There is no filter bar (nothing to filter — the group is the filter).', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Pick a category or a tag', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'You must set exactly one of these:', 'menucraft' ); ?></p>
+						<pre class="menucraft-help-code">[menucraft_group category="pizza"]</pre>
+						<pre class="menucraft-help-code">[menucraft_group tag="vegan"]</pre>
+						<p><?php esc_html_e( 'You can use the slug (as above) or the numeric id.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'If both category and tag are set, category wins.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Which items are shown', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Every active item that has the chosen category (or the chosen tag).', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'An item that lives in several categories still shows up as long as one of them is the chosen one.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Header and layout attributes', 'menucraft' ); ?></h3>
+
+						<h4><code>show_header</code></h4>
+						<p><?php esc_html_e( 'Toggle the hero header (image + title + description).', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Values:', 'menucraft' ); ?> <code>show</code>, <code>hide</code></p>
+						<p><?php esc_html_e( 'Default:', 'menucraft' ); ?> <code>show</code></p>
+
+						<h4><code>collapsed</code></h4>
+						<p><?php esc_html_e( 'When yes, the group opens with only the title + description visible as a click strip.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Clicking reveals the image and the item list.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Useful when several groups share a single page and you want short "menu sections" that expand on demand.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Values:', 'menucraft' ); ?> <code>no</code>, <code>yes</code></p>
+						<p><?php esc_html_e( 'Default:', 'menucraft' ); ?> <code>no</code></p>
+						<p><?php esc_html_e( 'Example:', 'menucraft' ); ?></p>
+						<pre class="menucraft-help-code">[menucraft_group category="drinks" collapsed="yes"]</pre>
+
+						<h4><code>image</code>, <code>variants</code>, <code>columns</code>, <code>class</code>, <code>allergens_legend</code></h4>
+						<p><?php esc_html_e( 'Same meaning as in the main menu shortcode.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Combine several groups on one page', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Stack multiple shortcodes to build a full menu page from focused sections:', 'menucraft' ); ?></p>
+						<pre class="menucraft-help-code">[menucraft_group category="starters"]
+[menucraft_group category="mains"]
+[menucraft_group category="desserts" collapsed="yes"]</pre>
+
+					</div>
+				</details>
+
+				<?php // ---------- Group block ---------- ?>
+				<details class="menucraft-accordion-item">
+					<summary class="menucraft-accordion-summary">
+						<span class="menucraft-accordion-chevron" aria-hidden="true"></span>
+						<span class="menucraft-accordion-title"><?php esc_html_e( 'Group block (Gutenberg)', 'menucraft' ); ?></span>
+					</summary>
+					<div class="menucraft-accordion-body">
+
+						<h3><?php esc_html_e( 'What is the group block?', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'The visual companion to the group shortcode.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Pick a category or a tag from a dropdown and the block shows every matching item, headed by that taxonomy\'s image and description.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'How to add', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Open a page or post in the block editor.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Click the plus button, search for:', 'menucraft' ); ?> <code>MenuCraft</code></p>
+						<p><?php esc_html_e( 'Pick the block named:', 'menucraft' ); ?> <strong><?php esc_html_e( 'MenuCraft Group', 'menucraft' ); ?></strong></p>
+
+						<h3><?php esc_html_e( 'Sidebar panels', 'menucraft' ); ?></h3>
+						<ul>
+							<li><?php esc_html_e( 'Source: choose Category or Tag, then pick the specific one.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Header: toggle the hero header on/off and switch between full and collapsed mode.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Layout: image position, variants placement, allergen legend toggle.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Grid layout: turn on and set the columns per screen width.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Alignment & size: font size, card content alignment, border radius.', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'Colors: Container, Header, Items, Tags, Legend — each with its own picker set.', 'menucraft' ); ?></li>
+						</ul>
+
+						<h3><?php esc_html_e( 'Multiple groups on one page', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'You can add several MenuCraft Group blocks on the same page, each pointing to a different category or tag.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Set the header of some to "Start collapsed" so long pages stay readable.', 'menucraft' ); ?></p>
+
+					</div>
+				</details>
+
 				<?php // ---------- Gutenberg block ---------- ?>
 				<details class="menucraft-accordion-item">
 					<summary class="menucraft-accordion-summary">

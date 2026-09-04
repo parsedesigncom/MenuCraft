@@ -521,6 +521,112 @@
 	margin: 0 0 0.75em;
 }
 
+/* ============================================================= Group shortcode
+ * Hero header (category or tag image + name + description) followed by
+ * the list of items in that group. No filter bar — this is the "focused"
+ * variant of the menu view.
+ */
+
+.menucraft-group-header {
+	margin: 0 0 20px;
+}
+
+.menucraft-group-header-media img {
+	border-radius: 8px;
+	display: block;
+	height: auto;
+	max-width: 100%;
+	object-fit: cover;
+	width: 100%;
+}
+
+.menucraft-group-header-body {
+	margin-top: 12px;
+}
+
+.menucraft-group-title {
+	font-size: 1.6em;
+	font-weight: 700;
+	line-height: 1.2;
+	margin: 0 0 6px;
+}
+
+.menucraft-group-desc {
+	color: rgba( 0, 0, 0, 0.72 );
+	line-height: 1.5;
+	margin: 0;
+}
+
+/* Grid variant of the items list — same as the menu shortcode grid. */
+
+.menucraft-group--grid .menucraft-items {
+	display: grid;
+	gap: 16px;
+}
+
+.menucraft-group--grid .menucraft-item {
+	height: 100%;
+}
+
+/* Collapsible mode via native <details>. The summary carries the header
+ * markup so title + description sit inside the click target. */
+
+.menucraft-group-details {
+	background: transparent;
+}
+
+.menucraft-group-summary {
+	align-items: center;
+	cursor: pointer;
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	list-style: none;
+	padding: 12px 0;
+	position: relative;
+}
+
+.menucraft-group-summary::-webkit-details-marker {
+	display: none;
+}
+
+.menucraft-group-summary .menucraft-group-header {
+	flex: 1;
+	margin: 0;
+}
+
+.menucraft-group-summary-icon {
+	border-right: 2px solid rgba( 0, 0, 0, 0.4 );
+	border-bottom: 2px solid rgba( 0, 0, 0, 0.4 );
+	display: inline-block;
+	flex-shrink: 0;
+	height: 10px;
+	transform: rotate( 45deg );
+	transition: transform 0.2s ease;
+	width: 10px;
+}
+
+.menucraft-group-details[open] .menucraft-group-summary-icon {
+	transform: rotate( -135deg );
+}
+
+.menucraft-group-content {
+	padding-top: 8px;
+}
+
+.menucraft-group-expanded-media {
+	margin: 0 0 16px;
+}
+
+.menucraft-group-expanded-media img {
+	border-radius: 8px;
+	display: block;
+	height: auto;
+	max-width: 100%;
+	object-fit: cover;
+	width: 100%;
+}
+
 body.menucraft-modal-lock {
 	overflow: hidden;
 }

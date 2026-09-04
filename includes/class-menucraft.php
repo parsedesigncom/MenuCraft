@@ -46,6 +46,7 @@ class MenuCraft {
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-rest.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-block.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-offers-block.php';
+		require_once MENUCRAFT_PLUGIN_DIR . 'includes/class-menucraft-group-block.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'admin/class-menucraft-admin.php';
 		require_once MENUCRAFT_PLUGIN_DIR . 'public/class-menucraft-public.php';
 
@@ -87,6 +88,7 @@ class MenuCraft {
 		$this->loader->add_action( 'init', $public, 'register_assets' );
 		$this->loader->add_action( 'init', 'MenuCraft_Block', 'register' );
 		$this->loader->add_action( 'init', 'MenuCraft_Offers_Block', 'register' );
+		$this->loader->add_action( 'init', 'MenuCraft_Group_Block', 'register' );
 	}
 
 	/**

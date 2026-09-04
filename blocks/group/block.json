@@ -1,0 +1,50 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "menucraft/group",
+	"title": "MenuCraft Group",
+	"category": "menucraft",
+	"icon": "category",
+	"description": "Show every item from one category or one tag, with the taxonomy's own image and description as a hero header.",
+	"keywords": [ "menucraft", "category", "tag", "menu section" ],
+	"textdomain": "menucraft",
+	"attributes": {
+		"source":     { "type": "string", "default": "category", "enum": [ "category", "tag" ] },
+		"sourceId":   { "type": "integer", "default": 0 },
+		"image":      { "type": "string", "default": "left", "enum": [ "left", "right", "top" ] },
+		"variants":   { "type": "string", "default": "inline", "enum": [ "inline", "modal" ] },
+		"columns":    { "type": "string", "default": "" },
+		"allergensLegend": { "type": "string", "default": "show", "enum": [ "show", "hide" ] },
+		"showHeader":      { "type": "string", "default": "show", "enum": [ "show", "hide" ] },
+		"collapsed":       { "type": "string", "default": "no",   "enum": [ "no", "yes" ] },
+
+		"fontScale":    { "type": "string", "default": "medium", "enum": [ "small", "medium", "large" ] },
+		"itemAlign":    { "type": "string", "default": "left",   "enum": [ "left", "center", "right" ] },
+		"borderRadius": { "type": "string", "default": "" },
+
+		"bgColor":              { "type": "string", "default": "" },
+		"textColor":            { "type": "string", "default": "" },
+		"headerBg":             { "type": "string", "default": "" },
+		"headerTitleColor":     { "type": "string", "default": "" },
+		"headerDescColor":      { "type": "string", "default": "" },
+		"itemBg":               { "type": "string", "default": "" },
+		"itemBorder":           { "type": "string", "default": "" },
+		"itemTitleColor":       { "type": "string", "default": "" },
+		"itemDescColor":        { "type": "string", "default": "" },
+		"itemPriceColor":       { "type": "string", "default": "" },
+		"allergenSupColor":     { "type": "string", "default": "" },
+		"variantDividerColor":  { "type": "string", "default": "" },
+		"tagBorder":            { "type": "string", "default": "" },
+		"tagText":              { "type": "string", "default": "" },
+		"legendBg":             { "type": "string", "default": "" },
+		"legendText":           { "type": "string", "default": "" }
+	},
+	"supports": {
+		"className": true,
+		"html": false,
+		"align": [ "wide", "full" ]
+	},
+	"editorScript": "file:./index.js",
+	"style":       "menucraft-public",
+	"viewScript":  "menucraft-public"
+}

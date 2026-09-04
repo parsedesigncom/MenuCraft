@@ -42,6 +42,17 @@
 				applyFilters( root );
 			} );
 		} );
+
+		// Pre-activate any chip marked as default (currently only used by
+		// the category filter). Auto-applies the filter so the initial
+		// view is focused instead of listing every item.
+		var defaults = root.querySelectorAll( '[data-menucraft-default]' );
+		if ( defaults.length ) {
+			Array.prototype.forEach.call( defaults, function ( d ) {
+				d.classList.add( 'is-active' );
+			} );
+			applyFilters( root );
+		}
 	}
 
 	function collectActive( root, kind ) {

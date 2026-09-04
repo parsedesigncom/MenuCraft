@@ -65,6 +65,7 @@ defined( 'ABSPATH' ) || exit;
 						<p><?php esc_html_e( 'For example: Starters, Main courses, Desserts, Drinks.', 'menucraft' ); ?></p>
 						<p><?php esc_html_e( 'Where to find:', 'menucraft' ); ?> <strong><?php esc_html_e( 'MenuCraft → Categories', 'menucraft' ); ?></strong></p>
 						<p><?php esc_html_e( 'On the frontend every category becomes a filter button that visitors can tap.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Tip: for large menus, mark one category as "Default". Its filter is pre-selected so the page opens focused on that section instead of listing every item.', 'menucraft' ); ?></p>
 
 						<h3><?php esc_html_e( 'Step 3 — Tags', 'menucraft' ); ?></h3>
 						<p><?php esc_html_e( 'Extra labels that cross the categories.', 'menucraft' ); ?></p>

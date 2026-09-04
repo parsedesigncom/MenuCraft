@@ -136,6 +136,8 @@ class MenuCraft_Admin {
 					'offerCurrent'    => __( 'Currently valid', 'menucraft' ),
 					'offerUpcoming'   => __( 'Upcoming', 'menucraft' ),
 					'offerExpired'    => __( 'Expired', 'menucraft' ),
+					'defaultCategory' => __( 'Default', 'menucraft' ),
+					'defaultCategoryTitle' => __( 'Pre-selected in the frontend filter', 'menucraft' ),
 				),
 			)
 		);

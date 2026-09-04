@@ -55,7 +55,8 @@ $items_override   = apply_filters( 'menucraft_shortcode_items_html', '', $items 
 								<button type="button"
 									class="menucraft-filter-chip"
 									data-menucraft-filter="category"
-									data-menucraft-value="<?php echo esc_attr( (string) $cat['id'] ); ?>">
+									data-menucraft-value="<?php echo esc_attr( (string) $cat['id'] ); ?>"
+									<?php if ( ! empty( $cat['is_default'] ) ) : ?>data-menucraft-default<?php endif; ?>>
 									<?php echo esc_html( $cat['name'] ); ?>
 								</button>
 							<?php endforeach; ?>

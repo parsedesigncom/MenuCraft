@@ -1591,6 +1591,21 @@ body.menucraft-offcanvas-open {
 	padding: 1px 5px;
 }
 
+.menucraft-default-badge {
+	background: #eef2ff;
+	border: 1px solid #c7d2fe;
+	border-radius: 4px;
+	color: #3730a3;
+	display: inline-block;
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	line-height: 1.4;
+	padding: 1px 6px;
+	text-transform: uppercase;
+	vertical-align: middle;
+}
+
 .menucraft-help-code {
 	background: #1f2937;
 	border-radius: 6px;

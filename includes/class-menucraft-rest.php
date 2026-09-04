@@ -206,7 +206,7 @@ class MenuCraft_REST {
 						return self::handle_create( $req, $resource );
 					},
 					'permission_callback' => array( __CLASS__, 'permission_manage' ),
-					'args'                => self::term_args( true ),
+					'args'                => self::term_args( true, $resource ),
 				),
 			)
 		);
@@ -228,7 +228,7 @@ class MenuCraft_REST {
 						return self::handle_update( $req, $resource );
 					},
 					'permission_callback' => array( __CLASS__, 'permission_manage' ),
-					'args'                => self::term_args( false ),
+					'args'                => self::term_args( false, $resource ),
 				),
 				array(
 					'methods'             => WP_REST_Server::DELETABLE,
@@ -253,10 +253,11 @@ class MenuCraft_REST {
 	/**
 	 * Argument schema for term create/update.
 	 *
-	 * @param bool $name_required Set false for updates so partial payloads work.
+	 * @param bool        $name_required Set false for updates so partial payloads work.
+	 * @param string|null $resource      Resource key — categories may expose extra args (is_default) that tags don't.
 	 * @return array<string,array<string,mixed>>
 	 */
-	private static function term_args( $name_required ) {
+	private static function term_args( $name_required, $resource = null ) {
 		$args = array(
 			'name'        => array(
 				'required'          => (bool) $name_required,
@@ -285,12 +286,22 @@ class MenuCraft_REST {
 			),
 		);
 
+		if ( 'categories' === $resource ) {
+			$args['is_default'] = array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+			);
+		}
+
 		if ( $name_required ) {
 			$args['description']['default'] = '';
 			$args['color']['default']       = '';
 			$args['media_id']['default']    = 0;
 			$args['sort_order']['default']  = 0;
 			$args['is_active']['default']   = true;
+			if ( isset( $args['is_default'] ) ) {
+				$args['is_default']['default'] = false;
+			}
 		}
 
 		return $args;
@@ -371,18 +382,22 @@ class MenuCraft_REST {
 			array( $repo, 'slug_exists' )
 		);
 
-		$entity = call_user_func(
-			array( $repo, 'insert' ),
-			array(
-				'name'        => $name,
-				'slug'        => $slug,
-				'description' => (string) $request->get_param( 'description' ),
-				'color'       => (string) $request->get_param( 'color' ),
-				'media_id'    => (int) $request->get_param( 'media_id' ),
-				'sort_order'  => (int) $request->get_param( 'sort_order' ),
-				'is_active'   => (bool) $request->get_param( 'is_active' ) ? 1 : 0,
-			)
+		$insert_data = array(
+			'name'        => $name,
+			'slug'        => $slug,
+			'description' => (string) $request->get_param( 'description' ),
+			'color'       => (string) $request->get_param( 'color' ),
+			'media_id'    => (int) $request->get_param( 'media_id' ),
+			'sort_order'  => (int) $request->get_param( 'sort_order' ),
+			'is_active'   => (bool) $request->get_param( 'is_active' ) ? 1 : 0,
 		);
+		// Extra category-only field: pass through only when the resource
+		// actually exposes it in term_args().
+		if ( 'categories' === $resource && $request->has_param( 'is_default' ) ) {
+			$insert_data['is_default'] = (bool) $request->get_param( 'is_default' ) ? 1 : 0;
+		}
+
+		$entity = call_user_func( array( $repo, 'insert' ), $insert_data );
 
 		if ( null === $entity ) {
 			return new WP_Error( 'menucraft_insert_failed', __( 'Could not save.', 'menucraft' ), array( 'status' => 500 ) );
@@ -440,6 +455,9 @@ class MenuCraft_REST {
 
 		if ( $request->has_param( 'is_active' ) ) {
 			$data['is_active'] = (bool) $request->get_param( 'is_active' ) ? 1 : 0;
+		}
+		if ( 'categories' === $resource && $request->has_param( 'is_default' ) ) {
+			$data['is_default'] = (bool) $request->get_param( 'is_default' ) ? 1 : 0;
 		}
 
 		$updated = call_user_func( array( $repo, 'update' ), $id, $data );

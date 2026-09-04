@@ -134,6 +134,16 @@ defined( 'ABSPATH' ) || exit;
 							<?php esc_html_e( 'Active', 'menucraft' ); ?>
 						</label>
 					</div>
+
+					<div class="menucraft-field menucraft-field-checkbox">
+						<label for="menucraft-cat-default">
+							<input type="checkbox" id="menucraft-cat-default" name="is_default" value="1">
+							<?php esc_html_e( 'Set as default', 'menucraft' ); ?>
+						</label>
+						<p class="menucraft-field-help">
+							<?php esc_html_e( 'When set, this category is pre-selected in the frontend filter so the menu opens focused on this section. Only one category can be default at a time.', 'menucraft' ); ?>
+						</p>
+					</div>
 				</div>
 
 				<footer class="menucraft-offcanvas-footer">

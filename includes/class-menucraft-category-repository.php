@@ -97,15 +97,18 @@ class MenuCraft_Category_Repository {
 
 		$now = current_time( 'mysql', 1 );
 
+		$is_default = ! empty( $data['is_default'] ) ? 1 : 0;
+
 		$row     = array(
 			'name'       => (string) $data['name'],
 			'slug'       => (string) $data['slug'],
 			'sort_order' => isset( $data['sort_order'] ) ? (int) $data['sort_order'] : 0,
 			'is_active'  => ! empty( $data['is_active'] ) ? 1 : 0,
+			'is_default' => $is_default,
 			'created_at' => $now,
 			'updated_at' => $now,
 		);
-		$formats = array( '%s', '%s', '%d', '%d', '%s', '%s' );
+		$formats = array( '%s', '%s', '%d', '%d', '%d', '%s', '%s' );
 
 		if ( ! empty( $data['description'] ) ) {
 			$row['description'] = (string) $data['description'];
@@ -120,6 +123,12 @@ class MenuCraft_Category_Repository {
 		if ( ! empty( $data['media_id'] ) ) {
 			$row['media_id'] = (int) $data['media_id'];
 			$formats[]       = '%d';
+		}
+
+		// Single-default enforcement: unset any existing default before we
+		// insert this one as the new default.
+		if ( 1 === $is_default ) {
+			self::clear_default( 0 );
 		}
 
 		$result = $wpdb->insert( self::table(), $row, $formats ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
@@ -170,6 +179,17 @@ class MenuCraft_Category_Repository {
 		$assign( 'sort_order', '%d' );
 		$assign( 'is_active', '%d' );
 
+		// Single-default enforcement for is_default: when a category is
+		// being promoted to default, clear the current default first.
+		if ( array_key_exists( 'is_default', $data ) ) {
+			$is_default = ! empty( $data['is_default'] ) ? 1 : 0;
+			if ( 1 === $is_default ) {
+				self::clear_default( (int) $id );
+			}
+			$sets[]   = '`is_default` = %d';
+			$values[] = $is_default;
+		}
+
 		if ( empty( $sets ) ) {
 			return self::find( (int) $id );
 		}
@@ -213,6 +233,24 @@ class MenuCraft_Category_Repository {
 	}
 
 	/**
+	 * Zero out is_default on every category except the one being promoted
+	 * (or all of them, when $keep_id is 0). Enforces the single-default
+	 * invariant that the frontend filter depends on.
+	 *
+	 * @param int $keep_id Category ID that stays default; pass 0 to clear all.
+	 */
+	private static function clear_default( $keep_id ) {
+		global $wpdb;
+		$table = self::table();
+		$wpdb->query( // phpcs:ignore WordPress.DB
+			$wpdb->prepare(
+				"UPDATE `{$table}` SET is_default = 0 WHERE is_default = 1 AND id <> %d", // phpcs:ignore WordPress.DB
+				(int) $keep_id
+			)
+		);
+	}
+
+	/**
 	 * Cast raw DB strings to the types the API should hand back.
 	 *
 	 * @param array<string,mixed> $row Raw row from wpdb (all strings/nulls).
@@ -228,6 +266,7 @@ class MenuCraft_Category_Repository {
 			'media_id'    => isset( $row['media_id'] ) ? (int) $row['media_id'] : 0,
 			'sort_order'  => (int) $row['sort_order'],
 			'is_active'   => (int) $row['is_active'] === 1,
+			'is_default'  => isset( $row['is_default'] ) && (int) $row['is_default'] === 1,
 			'created_at'  => (string) $row['created_at'],
 			'updated_at'  => (string) $row['updated_at'],
 		);

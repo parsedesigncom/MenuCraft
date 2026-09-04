@@ -594,6 +594,11 @@
 			activeBox.checked = !! entity.is_active;
 		}
 
+		var defaultBox = form.querySelector( '[name="is_default"]' );
+		if ( defaultBox ) {
+			defaultBox.checked = !! entity.is_default;
+		}
+
 		var picker = form.querySelector( '[data-menucraft-media-picker]' );
 		if ( picker ) {
 			setMediaByUrl( picker, entity.media_id, entity.media_url );
@@ -1087,6 +1092,14 @@
 		var nameStrong   = document.createElement( 'strong' );
 		nameStrong.textContent = entity.name;
 		tdName.appendChild( nameStrong );
+		if ( entity.is_default ) {
+			tdName.appendChild( document.createTextNode( ' ' ) );
+			var defBadge = document.createElement( 'span' );
+			defBadge.className   = 'menucraft-default-badge';
+			defBadge.title       = i18n.defaultCategoryTitle || 'Pre-selected in the frontend filter';
+			defBadge.textContent = i18n.defaultCategory || 'Default';
+			tdName.appendChild( defBadge );
+		}
 		if ( entity.slug ) {
 			var slugSmall = document.createElement( 'div' );
 			slugSmall.className   = 'menucraft-cell-sub';

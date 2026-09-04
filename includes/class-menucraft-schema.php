@@ -61,11 +61,13 @@ class MenuCraft_Schema {
 			media_id bigint(20) unsigned NULL,
 			sort_order int(11) NOT NULL DEFAULT 0,
 			is_active tinyint(1) NOT NULL DEFAULT 1,
+			is_default tinyint(1) NOT NULL DEFAULT 0,
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
 			UNIQUE KEY slug (slug),
-			KEY is_active (is_active)
+			KEY is_active (is_active),
+			KEY is_default (is_default)
 		) {$charset};";
 
 		// Tags — flat, no hierarchy (identical structure to categories).
@@ -381,6 +383,23 @@ class MenuCraft_Schema {
 			);
 			if ( ! $has_offer_key ) {
 				$wpdb->query( "ALTER TABLE `{$offer_items}` ADD KEY `offer_id` (`offer_id`)" ); // phpcs:ignore WordPress.DB
+			}
+		}
+
+		if ( version_compare( $from_version, '1.5', '<' ) ) {
+			// Categories: opt-in "default" flag that pre-activates the
+			// matching filter chip on the frontend so a large menu opens
+			// focused on one section instead of blasting everything at
+			// once.
+			$categories  = $tables['categories'];
+			$has_default = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$wpdb->prepare(
+					"SHOW COLUMNS FROM `{$categories}` LIKE %s", // phpcs:ignore WordPress.DB
+					'is_default'
+				)
+			);
+			if ( ! $has_default ) {
+				$wpdb->query( "ALTER TABLE `{$categories}` ADD COLUMN `is_default` TINYINT(1) NOT NULL DEFAULT 0 AFTER `is_active`, ADD KEY `is_default` (`is_default`)" ); // phpcs:ignore WordPress.DB
 			}
 		}
 	}

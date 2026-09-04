@@ -381,6 +381,7 @@
 
 		// Chip selectors add their arrays to the payload.
 		collectChipSelections( form, payload );
+		collectSelectSelections( form, payload );
 
 		// Items include their in-memory variants list. Existing variants
 		// carry their DB id so the backend can UPDATE in place rather than
@@ -541,6 +542,14 @@
 			}
 		);
 
+		// Reset select-boxes (clear pills + search input).
+		Array.prototype.forEach.call(
+			form.querySelectorAll( '[data-menucraft-select]' ),
+			function ( container ) {
+				resetSelect( container );
+			}
+		);
+
 		// Reset item variants state + refresh UI counter.
 		if ( form.getAttribute( 'data-menucraft-endpoint' ) === 'items' ) {
 			itemFormState.variants = [];
@@ -611,6 +620,16 @@
 				var name = container.getAttribute( 'data-menucraft-chips-name' );
 				var selected = ( entity[ name ] || [] ).map( function ( n ) { return parseInt( n, 10 ); } );
 				renderChips( container, selected );
+			}
+		);
+
+		// Select-box selections — same data source as chips, different UI.
+		Array.prototype.forEach.call(
+			form.querySelectorAll( '[data-menucraft-select]' ),
+			function ( container ) {
+				var name = container.getAttribute( 'data-menucraft-select-name' );
+				var ids  = ( entity[ name ] || [] ).map( function ( n ) { return parseInt( n, 10 ); } );
+				setSelectSelection( container, ids );
 			}
 		);
 
@@ -1454,6 +1473,11 @@
 				renderTable( listStates.offers );
 			}
 		}
+
+		// Select-boxes (item edit panel) draw from the same cache — refresh
+		// their dropdowns so freshly-created categories/tags/allergens show
+		// up without a page reload.
+		refreshSelectsFor( resource );
 	}
 
 	document.addEventListener( 'click', function ( event ) {
@@ -2449,6 +2473,311 @@
 		}
 	} );
 
+	// ========================================================= Select-box ==
+	//
+	// Select2-style multi-select: text input with search, dropdown of
+	// filtered options, pills for chosen values. Same data source as chips
+	// (listStates.<resource>.cache) so the two widgets can coexist on
+	// different pages.
+	//
+	// DOM (built by initSelects on boot):
+	//   <div data-menucraft-select="{resource}"
+	//        data-menucraft-select-name="{payload_key}"
+	//        data-menucraft-select-placeholder="…"
+	//        data-menucraft-select-empty="…">
+	//     <div class="menucraft-select-control">
+	//       <span class="menucraft-select-pill" data-id="…">…<button>×</button></span>
+	//       …
+	//       <input type="text" class="menucraft-select-input">
+	//     </div>
+	//     <div class="menucraft-select-dropdown" hidden>
+	//       <div class="menucraft-select-option" data-id="…">…</div>
+	//     </div>
+	//   </div>
+
+	function initSelects() {
+		var containers = document.querySelectorAll( '[data-menucraft-select]' );
+		Array.prototype.forEach.call( containers, buildSelectShell );
+	}
+
+	function buildSelectShell( container ) {
+		if ( container.querySelector( '.menucraft-select-control' ) ) {
+			return; // already initialised
+		}
+		var placeholder = container.getAttribute( 'data-menucraft-select-placeholder' ) || '';
+
+		var control = document.createElement( 'div' );
+		control.className = 'menucraft-select-control';
+
+		// Pills area (top): may wrap across several rows when many are picked.
+		var pills = document.createElement( 'div' );
+		pills.className = 'menucraft-select-pills';
+		control.appendChild( pills );
+
+		// Search input (bottom): always on its own line under the pills.
+		var input = document.createElement( 'input' );
+		input.type              = 'text';
+		input.className         = 'menucraft-select-input';
+		input.placeholder       = placeholder;
+		input.autocomplete      = 'off';
+		input.setAttribute( 'spellcheck', 'false' );
+		control.appendChild( input );
+
+		var dropdown = document.createElement( 'div' );
+		dropdown.className = 'menucraft-select-dropdown';
+		dropdown.hidden    = true;
+
+		container.appendChild( control );
+		container.appendChild( dropdown );
+	}
+
+	function getSelectSelectedIds( container ) {
+		var pills = container.querySelectorAll( '.menucraft-select-pill' );
+		return Array.prototype.map.call( pills, function ( p ) {
+			return parseInt( p.getAttribute( 'data-id' ), 10 );
+		} ).filter( function ( n ) { return ! isNaN( n ); } );
+	}
+
+	function renderSelectDropdown( container, filter ) {
+		var dropdown = container.querySelector( '.menucraft-select-dropdown' );
+		if ( ! dropdown ) return;
+
+		var resource = container.getAttribute( 'data-menucraft-select' );
+		var state    = listStates[ resource ];
+		var emptyMsg = container.getAttribute( 'data-menucraft-select-empty' ) || '';
+
+		dropdown.innerHTML = '';
+
+		if ( ! state || ! state.cache.length ) {
+			var e = document.createElement( 'div' );
+			e.className   = 'menucraft-select-empty';
+			e.textContent = emptyMsg;
+			dropdown.appendChild( e );
+			return;
+		}
+
+		var selected = getSelectSelectedIds( container );
+		var q        = ( filter || '' ).toLowerCase().trim();
+
+		var matches = state.cache.filter( function ( row ) {
+			if ( selected.indexOf( row.id ) > -1 ) return false;
+			if ( '' === q ) return true;
+			return row.name.toLowerCase().indexOf( q ) > -1
+				|| ( row.code && String( row.code ).toLowerCase().indexOf( q ) > -1 );
+		} );
+
+		if ( ! matches.length ) {
+			var n = document.createElement( 'div' );
+			n.className   = 'menucraft-select-empty';
+			n.textContent = i18n.noMatches || 'No matches.';
+			dropdown.appendChild( n );
+			return;
+		}
+
+		matches.forEach( function ( row ) {
+			var opt = document.createElement( 'div' );
+			opt.className = 'menucraft-select-option';
+			opt.setAttribute( 'data-id', String( row.id ) );
+			if ( row.code ) {
+				var code = document.createElement( 'span' );
+				code.className   = 'menucraft-select-option-code';
+				code.textContent = row.code;
+				opt.appendChild( code );
+			}
+			var lbl = document.createElement( 'span' );
+			lbl.className   = 'menucraft-select-option-label';
+			lbl.textContent = row.name;
+			opt.appendChild( lbl );
+			dropdown.appendChild( opt );
+		} );
+	}
+
+	function addSelectPill( container, id ) {
+		var resource = container.getAttribute( 'data-menucraft-select' );
+		var state    = listStates[ resource ];
+		if ( ! state ) return;
+		var row = null;
+		for ( var i = 0; i < state.cache.length; i++ ) {
+			if ( state.cache[ i ].id === id ) { row = state.cache[ i ]; break; }
+		}
+		if ( ! row ) return;
+
+		var pillsArea = container.querySelector( '.menucraft-select-pills' );
+		if ( ! pillsArea ) return;
+
+		var pill = document.createElement( 'span' );
+		pill.className = 'menucraft-select-pill';
+		pill.setAttribute( 'data-id', String( id ) );
+
+		if ( row.color ) {
+			pill.style.setProperty( '--menucraft-chip-color', row.color );
+		}
+
+		if ( row.code ) {
+			var code = document.createElement( 'span' );
+			code.className   = 'menucraft-select-pill-code';
+			code.textContent = row.code;
+			pill.appendChild( code );
+		}
+
+		var label = document.createElement( 'span' );
+		label.className   = 'menucraft-select-pill-label';
+		label.textContent = row.name;
+		pill.appendChild( label );
+
+		var rm = document.createElement( 'button' );
+		rm.type      = 'button';
+		rm.className = 'menucraft-select-pill-remove';
+		rm.textContent = '×';
+		rm.setAttribute( 'aria-label', i18n.delete || 'Remove' );
+		pill.appendChild( rm );
+
+		pillsArea.appendChild( pill );
+	}
+
+	// Public helpers used from the form-lifecycle code above.
+	function resetSelect( container ) {
+		var pills = container.querySelectorAll( '.menucraft-select-pill' );
+		Array.prototype.forEach.call( pills, function ( p ) { p.parentNode.removeChild( p ); } );
+		var input = container.querySelector( '.menucraft-select-input' );
+		if ( input ) input.value = '';
+		var dropdown = container.querySelector( '.menucraft-select-dropdown' );
+		if ( dropdown ) dropdown.hidden = true;
+	}
+
+	function setSelectSelection( container, ids ) {
+		resetSelect( container );
+		ids.forEach( function ( id ) { addSelectPill( container, id ); } );
+	}
+
+	function collectSelectSelections( form, payload ) {
+		var containers = form.querySelectorAll( '[data-menucraft-select-name]' );
+		Array.prototype.forEach.call( containers, function ( container ) {
+			var name = container.getAttribute( 'data-menucraft-select-name' );
+			payload[ name ] = getSelectSelectedIds( container );
+		} );
+	}
+
+	function refreshSelectsFor( resource ) {
+		var containers = document.querySelectorAll( '[data-menucraft-select="' + resource + '"]' );
+		Array.prototype.forEach.call( containers, function ( container ) {
+			// If dropdown is currently open, re-render options against fresh
+			// cache. If it's closed, nothing to do — options are rebuilt on
+			// next focus.
+			var dropdown = container.querySelector( '.menucraft-select-dropdown' );
+			if ( dropdown && ! dropdown.hidden ) {
+				var input = container.querySelector( '.menucraft-select-input' );
+				renderSelectDropdown( container, input ? input.value : '' );
+			}
+			// Also rebuild any pill that has stale data (e.g. label change).
+			var pills = container.querySelectorAll( '.menucraft-select-pill' );
+			if ( pills.length ) {
+				var ids = getSelectSelectedIds( container );
+				setSelectSelection( container, ids );
+			}
+		} );
+	}
+
+	// ---- Event delegation ----
+
+	document.addEventListener( 'focusin', function ( event ) {
+		var input = event.target.closest( '.menucraft-select-input' );
+		if ( ! input ) return;
+		var container = input.closest( '[data-menucraft-select]' );
+		if ( ! container ) return;
+		var dropdown = container.querySelector( '.menucraft-select-dropdown' );
+		if ( dropdown ) dropdown.hidden = false;
+		renderSelectDropdown( container, input.value );
+	} );
+
+	document.addEventListener( 'input', function ( event ) {
+		var input = event.target.closest( '.menucraft-select-input' );
+		if ( ! input ) return;
+		var container = input.closest( '[data-menucraft-select]' );
+		if ( ! container ) return;
+		var dropdown = container.querySelector( '.menucraft-select-dropdown' );
+		if ( dropdown ) dropdown.hidden = false;
+		renderSelectDropdown( container, input.value );
+	} );
+
+	document.addEventListener( 'keydown', function ( event ) {
+		var input = event.target.closest( '.menucraft-select-input' );
+		if ( ! input ) return;
+		var container = input.closest( '[data-menucraft-select]' );
+		if ( ! container ) return;
+
+		if ( 'Escape' === event.key ) {
+			var dropdown = container.querySelector( '.menucraft-select-dropdown' );
+			if ( dropdown ) dropdown.hidden = true;
+			return;
+		}
+
+		// Backspace on empty input removes the last pill — muscle-memory
+		// familiar from Select2 / Chosen.
+		if ( 'Backspace' === event.key && '' === input.value ) {
+			var pills = container.querySelectorAll( '.menucraft-select-pill' );
+			if ( pills.length ) {
+				pills[ pills.length - 1 ].parentNode.removeChild( pills[ pills.length - 1 ] );
+				var dd = container.querySelector( '.menucraft-select-dropdown' );
+				if ( dd && ! dd.hidden ) renderSelectDropdown( container, '' );
+			}
+		}
+	} );
+
+	document.addEventListener( 'click', function ( event ) {
+		// Click on an option — add pill + reset input + refocus.
+		var opt = event.target.closest( '.menucraft-select-option' );
+		if ( opt ) {
+			var optContainer = opt.closest( '[data-menucraft-select]' );
+			if ( optContainer ) {
+				event.preventDefault();
+				var id = parseInt( opt.getAttribute( 'data-id' ), 10 );
+				if ( ! isNaN( id ) ) {
+					addSelectPill( optContainer, id );
+					var input = optContainer.querySelector( '.menucraft-select-input' );
+					if ( input ) {
+						input.value = '';
+						input.focus();
+					}
+					renderSelectDropdown( optContainer, '' );
+				}
+			}
+			return;
+		}
+
+		// Click on pill remove.
+		var rm = event.target.closest( '.menucraft-select-pill-remove' );
+		if ( rm ) {
+			event.preventDefault();
+			var pill = rm.closest( '.menucraft-select-pill' );
+			var pillContainer = pill && pill.closest( '[data-menucraft-select]' );
+			if ( pill && pill.parentNode ) pill.parentNode.removeChild( pill );
+			if ( pillContainer ) {
+				var pillInput = pillContainer.querySelector( '.menucraft-select-input' );
+				var pillDd    = pillContainer.querySelector( '.menucraft-select-dropdown' );
+				if ( pillDd && ! pillDd.hidden ) {
+					renderSelectDropdown( pillContainer, pillInput ? pillInput.value : '' );
+				}
+				if ( pillInput ) pillInput.focus();
+			}
+			return;
+		}
+
+		// Click on control (empty area) — focus the input.
+		var ctrl = event.target.closest( '.menucraft-select-control' );
+		if ( ctrl && event.target === ctrl ) {
+			var ctrlInput = ctrl.querySelector( '.menucraft-select-input' );
+			if ( ctrlInput ) ctrlInput.focus();
+			return;
+		}
+
+		// Click anywhere outside any select — close all open dropdowns.
+		if ( ! event.target.closest( '[data-menucraft-select]' ) ) {
+			var open = document.querySelectorAll( '.menucraft-select-dropdown' );
+			Array.prototype.forEach.call( open, function ( d ) { d.hidden = true; } );
+		}
+	} );
+
 	// =========================================================== Toast ==
 
 	function showToast( message, type ) {
@@ -2573,6 +2902,7 @@
 
 	function boot() {
 		applyCurrencyPrefix( document );
+		initSelects();
 		initLists();
 		initOptionsForm();
 	}

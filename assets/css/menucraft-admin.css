@@ -1591,6 +1591,155 @@ body.menucraft-offcanvas-open {
 	padding: 1px 5px;
 }
 
+/* Select-box — Select2-style multi-select for item edit panel */
+
+.menucraft-select {
+	position: relative;
+}
+
+.menucraft-select-control {
+	background: #ffffff;
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	cursor: text;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 6px;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.menucraft-select-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.menucraft-select-pills:empty {
+	display: none;
+}
+
+.menucraft-select-control:focus-within {
+	border-color: #3858e9;
+	box-shadow: 0 0 0 2px rgba( 56, 88, 233, 0.2 );
+}
+
+.menucraft-select-pill {
+	--menucraft-chip-color: #3858e9;
+	align-items: center;
+	background: #eef2ff;
+	border: 1px solid var( --menucraft-chip-color );
+	border-radius: 999px;
+	color: #1d2327;
+	display: inline-flex;
+	font-size: 12px;
+	gap: 4px;
+	line-height: 1.2;
+	padding: 2px 4px 2px 10px;
+}
+
+.menucraft-select-pill-code {
+	background: rgba( 0, 0, 0, 0.06 );
+	border-radius: 3px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 10px;
+	font-weight: 600;
+	margin-right: 2px;
+	padding: 0 4px;
+}
+
+.menucraft-select-pill-label {
+	line-height: 1.4;
+}
+
+.menucraft-select-pill-remove {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 50%;
+	color: #4b5563;
+	cursor: pointer;
+	display: inline-flex;
+	font-size: 14px;
+	height: 18px;
+	justify-content: center;
+	line-height: 1;
+	padding: 0;
+	width: 18px;
+}
+
+.menucraft-select-pill-remove:hover,
+.menucraft-select-pill-remove:focus-visible {
+	background: rgba( 0, 0, 0, 0.1 );
+	color: #1d2327;
+	outline: none;
+}
+
+.menucraft-select-input {
+	background: transparent;
+	border: 0;
+	color: #1d2327;
+	display: block;
+	font-size: 14px;
+	outline: none;
+	padding: 4px 4px;
+	width: 100%;
+}
+
+/* Thin separator between pills and the input, only when pills exist. */
+.menucraft-select-pills:not(:empty) + .menucraft-select-input {
+	border-top: 1px solid #e5e7eb;
+	padding-top: 8px;
+}
+
+.menucraft-select-dropdown {
+	background: #ffffff;
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	box-shadow: 0 4px 12px rgba( 0, 0, 0, 0.08 );
+	left: 0;
+	margin-top: 2px;
+	max-height: 240px;
+	overflow-y: auto;
+	position: absolute;
+	right: 0;
+	top: 100%;
+	z-index: 10;
+}
+
+.menucraft-select-option {
+	align-items: center;
+	color: #1d2327;
+	cursor: pointer;
+	display: flex;
+	font-size: 14px;
+	gap: 8px;
+	padding: 6px 10px;
+}
+
+.menucraft-select-option:hover,
+.menucraft-select-option:focus {
+	background: #f3f4f6;
+}
+
+.menucraft-select-option-code {
+	background: #eef2ff;
+	border-radius: 3px;
+	color: #3730a3;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 11px;
+	font-weight: 600;
+	padding: 1px 6px;
+}
+
+.menucraft-select-empty {
+	color: #8c92a4;
+	font-size: 13px;
+	font-style: italic;
+	padding: 8px 10px;
+	text-align: center;
+}
+
 .menucraft-default-badge {
 	background: #eef2ff;
 	border: 1px solid #c7d2fe;

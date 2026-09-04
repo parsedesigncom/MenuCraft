@@ -258,28 +258,31 @@ defined( 'ABSPATH' ) || exit;
 
 					<div class="menucraft-field">
 						<label><?php esc_html_e( 'Categories', 'menucraft' ); ?></label>
-						<div class="menucraft-chips"
-							data-menucraft-chips="categories"
-							data-menucraft-chips-name="category_ids"
-							data-menucraft-chips-empty="<?php esc_attr_e( 'No categories yet — create some first.', 'menucraft' ); ?>">
+						<div class="menucraft-select"
+							data-menucraft-select="categories"
+							data-menucraft-select-name="category_ids"
+							data-menucraft-select-placeholder="<?php esc_attr_e( 'Type to search categories…', 'menucraft' ); ?>"
+							data-menucraft-select-empty="<?php esc_attr_e( 'No categories yet — create some first.', 'menucraft' ); ?>">
 						</div>
 					</div>
 
 					<div class="menucraft-field">
 						<label><?php esc_html_e( 'Tags', 'menucraft' ); ?></label>
-						<div class="menucraft-chips"
-							data-menucraft-chips="tags"
-							data-menucraft-chips-name="tag_ids"
-							data-menucraft-chips-empty="<?php esc_attr_e( 'No tags yet — create some first.', 'menucraft' ); ?>">
+						<div class="menucraft-select"
+							data-menucraft-select="tags"
+							data-menucraft-select-name="tag_ids"
+							data-menucraft-select-placeholder="<?php esc_attr_e( 'Type to search tags…', 'menucraft' ); ?>"
+							data-menucraft-select-empty="<?php esc_attr_e( 'No tags yet — create some first.', 'menucraft' ); ?>">
 						</div>
 					</div>
 
 					<div class="menucraft-field">
 						<label><?php esc_html_e( 'Allergens', 'menucraft' ); ?></label>
-						<div class="menucraft-chips"
-							data-menucraft-chips="allergens"
-							data-menucraft-chips-name="allergen_ids"
-							data-menucraft-chips-empty="<?php esc_attr_e( 'No allergens yet — create some first.', 'menucraft' ); ?>">
+						<div class="menucraft-select"
+							data-menucraft-select="allergens"
+							data-menucraft-select-name="allergen_ids"
+							data-menucraft-select-placeholder="<?php esc_attr_e( 'Type to search allergens…', 'menucraft' ); ?>"
+							data-menucraft-select-empty="<?php esc_attr_e( 'No allergens yet — create some first.', 'menucraft' ); ?>">
 						</div>
 					</div>
 

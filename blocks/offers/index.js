@@ -204,14 +204,21 @@
 				),
 			];
 
+			// Wrap each color group in a PanelBody to force the same
+			// collapse-on-title toggle used by the other panels; newer
+			// WP versions render PanelColorSettings as a flat dropdown
+			// list rather than a collapsible section, so its own
+			// initialOpen has no effect.
 			colorGroups.forEach( function ( group, idx ) {
 				inspectorChildren.push(
-					el( PanelColorSettings, {
-						title: group.title,
-						initialOpen: false,
-						key: 'colors-' + idx,
-						colorSettings: colorSettingsFor( group, attrs, set )
-					} )
+					el(
+						PanelBody,
+						{ title: group.title, initialOpen: false, key: 'colors-panel-' + idx },
+						el( PanelColorSettings, {
+							title: '',
+							colorSettings: colorSettingsFor( group, attrs, set )
+						} )
+					)
 				);
 			} );
 

@@ -46,10 +46,11 @@ class MenuCraft_Public {
 	}
 
 	/**
-	 * Register the shortcode. Called from the main loader.
+	 * Register the shortcodes. Called from the main loader.
 	 */
 	public function register_shortcodes() {
 		add_shortcode( 'menucraft', array( $this, 'render_shortcode' ) );
+		add_shortcode( 'menucraft_offers', array( $this, 'render_offers_shortcode' ) );
 	}
 
 	/**
@@ -511,6 +512,379 @@ class MenuCraft_Public {
 		 * @param array<string,mixed>            $config    Normalised config.
 		 */
 		return (string) apply_filters( 'menucraft_shortcode_item_html', $html, $item, $allergens, $tags, $config );
+	}
+
+	// ============================================================ Offers ==
+
+	/**
+	 * `[menucraft_offers]` shortcode entry point.
+	 *
+	 * Analogue of render_shortcode() but for offers. Different data
+	 * shape (no categories/tags/allergens) and different UX (no filter
+	 * bar; validity-window driven; card composition list) so it lives
+	 * in its own templates and its own hook family
+	 * `menucraft_offers_shortcode_*` / `menucraft_before_offers…`.
+	 *
+	 * Supported attributes (all optional):
+	 *   image=left|right|top          Image placement per card. Default left.
+	 *   columns="720__1 …"            Enable grid layout (same spec as menu).
+	 *   class="…"                     Extra CSS class on the outer wrapper.
+	 *   validity=preview|all          preview (default): active offers currently
+	 *                                 running OR starting within the next 7 days.
+	 *                                 all: every is_active=1 offer regardless of
+	 *                                 dates.
+	 *   show_items=inline|modal|hide  Location of the composition list. Default inline.
+	 *   show_desc=inline|modal|hide   Location of the offer description. Default inline.
+	 *   show_dates=show|hide          Toggle the "Valid X — Y" line. Default show.
+	 *   conditions=modal|inline|hide  Location of conditions_text. Default modal.
+	 *
+	 * @param array<string,mixed>|string $atts    Shortcode attributes.
+	 * @param string|null                $content Enclosed content (unused).
+	 * @return string
+	 */
+	public function render_offers_shortcode( $atts, $content = null ) {
+		unset( $content );
+
+		$atts = shortcode_atts(
+			array(
+				'image'          => 'left',
+				'columns'        => '',
+				'class'          => '',
+				'validity'       => 'preview',
+				'show_items'     => 'inline',
+				'show_desc'      => 'inline',
+				'show_dates'     => 'show',
+				'conditions'     => 'modal',
+			),
+			is_array( $atts ) ? $atts : array(),
+			'menucraft_offers'
+		);
+
+		wp_enqueue_style( $this->plugin_name . '-public' );
+		wp_enqueue_script( $this->plugin_name . '-public' );
+
+		self::$instance_counter++;
+		$instance_id = 'menucraft-offers-' . self::$instance_counter;
+
+		$config = self::normalise_offers_atts( $atts, $instance_id );
+
+		$offers    = $this->collect_offers( $config );
+		$items_map = $this->collect_items_map( $offers );
+
+		$context = array(
+			'atts'      => $atts,
+			'config'    => $config,
+			'offers'    => $offers,
+			'items_map' => $items_map,
+		);
+
+		/**
+		 * Filter: fully rewrite the offers shortcode output.
+		 *
+		 * @param string              $html    Empty by default.
+		 * @param array<string,mixed> $context offers, items_map, config, atts.
+		 */
+		$override = apply_filters( 'menucraft_offers_shortcode_html', '', $context );
+		if ( is_string( $override ) && '' !== $override ) {
+			return $override;
+		}
+
+		$template = self::locate_template( 'shortcode-offers' );
+
+		ob_start();
+		/**
+		 * Action: right before the offers shortcode template is included.
+		 *
+		 * @param array<string,mixed> $context Full render context.
+		 */
+		do_action( 'menucraft_before_offers_shortcode', $context );
+
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract
+		extract( $context, EXTR_SKIP );
+		include $template;
+
+		/**
+		 * Action: right after the offers shortcode template is included.
+		 *
+		 * @param array<string,mixed> $context Full render context.
+		 */
+		do_action( 'menucraft_after_offers_shortcode', $context );
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Normalise offer shortcode atts into a config bag.
+	 *
+	 * @param array<string,mixed> $atts        Raw sanitized shortcode atts.
+	 * @param string              $instance_id Unique HTML id for this shortcode call.
+	 * @return array<string,mixed>
+	 */
+	private static function normalise_offers_atts( array $atts, $instance_id ) {
+		$image_pos       = in_array( $atts['image'], array( 'left', 'right', 'top' ), true ) ? $atts['image'] : 'left';
+		$validity        = in_array( $atts['validity'], array( 'preview', 'all' ), true ) ? $atts['validity'] : 'preview';
+		$show_items_mode = in_array( $atts['show_items'], array( 'inline', 'modal', 'hide' ), true ) ? $atts['show_items'] : 'inline';
+		$show_desc_mode  = in_array( $atts['show_desc'], array( 'inline', 'modal', 'hide' ), true ) ? $atts['show_desc'] : 'inline';
+		$conditions_mode = in_array( $atts['conditions'], array( 'modal', 'inline', 'hide' ), true ) ? $atts['conditions'] : 'modal';
+		$show_dates      = 'hide' !== strtolower( (string) $atts['show_dates'] );
+
+		$breakpoints = self::parse_columns_spec( (string) $atts['columns'] );
+		$grid_css    = ! empty( $breakpoints ) ? self::build_grid_css_for( '#' . $instance_id . ' .menucraft-offers-list', $breakpoints ) : '';
+
+		$custom_class = '';
+		if ( '' !== trim( (string) $atts['class'] ) ) {
+			$parts = preg_split( '/\s+/', trim( (string) $atts['class'] ) );
+			$clean = array();
+			foreach ( $parts as $p ) {
+				$s = sanitize_html_class( $p );
+				if ( '' !== $s ) {
+					$clean[ $s ] = true;
+				}
+			}
+			$custom_class = implode( ' ', array_keys( $clean ) );
+		}
+
+		return array(
+			'instance_id'    => $instance_id,
+			'image_pos'      => $image_pos,
+			'validity'       => $validity,
+			'show_items'     => $show_items_mode,
+			'show_desc'      => $show_desc_mode,
+			'show_dates'     => $show_dates,
+			'conditions'     => $conditions_mode,
+			'grid_enabled'   => ! empty( $breakpoints ),
+			'grid_css'       => $grid_css,
+			'custom_class'   => $custom_class,
+		);
+	}
+
+	/**
+	 * Same grid-css generator as the menu shortcode uses, but with a
+	 * configurable target selector so the offers-list can carry its own
+	 * scoped rules.
+	 *
+	 * @param string $selector Full CSS selector (including id prefix).
+	 * @param array  $breakpoints Sorted ascending.
+	 * @return string
+	 */
+	private static function build_grid_css_for( $selector, array $breakpoints ) {
+		if ( empty( $breakpoints ) ) {
+			return '';
+		}
+		$base = end( $breakpoints );
+		reset( $breakpoints );
+
+		$css = $selector . '{display:grid;gap:16px;grid-template-columns:repeat(' . (int) $base['cols'] . ',minmax(0,1fr));}';
+
+		$without_base = array_slice( $breakpoints, 0, count( $breakpoints ) - 1 );
+		usort( $without_base, function ( $a, $b ) { return $b['max'] - $a['max']; } );
+
+		foreach ( $without_base as $bp ) {
+			$css .= '@media (max-width:' . (int) $bp['max'] . 'px){' . $selector . '{grid-template-columns:repeat(' . (int) $bp['cols'] . ',minmax(0,1fr));}}';
+		}
+		return $css;
+	}
+
+	/**
+	 * Fetch the offers to render, filtered by is_active and the
+	 * validity window (unless the user asked for "all"). The
+	 * default "preview" window includes offers that either run right
+	 * now or start within the next 7 days — that way marketing gets
+	 * a lead-in on upcoming promos.
+	 *
+	 * @param array<string,mixed> $config Normalised shortcode config.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function collect_offers( array $config ) {
+		$all = MenuCraft_Offer_Repository::all();
+
+		$now             = current_time( 'mysql', 1 );
+		$upcoming_cutoff = gmdate( 'Y-m-d H:i:s', strtotime( $now ) + 7 * DAY_IN_SECONDS );
+
+		$rows = array();
+		foreach ( $all as $offer ) {
+			if ( empty( $offer['is_active'] ) ) {
+				continue;
+			}
+			if ( 'all' === $config['validity'] ) {
+				$rows[] = $offer;
+				continue;
+			}
+			// preview mode: (no valid_from OR valid_from <= now+7d)
+			// AND (no valid_until OR valid_until >= now)
+			$from  = ! empty( $offer['valid_from'] ) ? $offer['valid_from'] : null;
+			$until = ! empty( $offer['valid_until'] ) ? $offer['valid_until'] : null;
+			if ( $from && $from > $upcoming_cutoff ) {
+				continue;
+			}
+			if ( $until && $until < $now ) {
+				continue;
+			}
+			$rows[] = $offer;
+		}
+
+		/**
+		 * Filter: modify or replace the offers list before rendering.
+		 *
+		 * @param array<int,array<string,mixed>> $rows   Filtered offers.
+		 * @param array<string,mixed>            $config Normalised config.
+		 */
+		$rows = apply_filters( 'menucraft_offers_shortcode_offers', $rows, $config );
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * Load every item + variant referenced by any offer, keyed by item
+	 * id, so the per-offer template can render "2× Pizza (Small)" lines
+	 * without another DB round-trip per offer.
+	 *
+	 * @param array<int,array<string,mixed>> $offers Visible offers.
+	 * @return array<int,array<string,mixed>> id => hydrated item
+	 */
+	private function collect_items_map( array $offers ) {
+		$item_ids = array();
+		foreach ( $offers as $offer ) {
+			foreach ( (array) $offer['items'] as $line ) {
+				$id = (int) $line['item_id'];
+				if ( $id > 0 ) {
+					$item_ids[ $id ] = true;
+				}
+			}
+		}
+
+		$out = array();
+		foreach ( array_keys( $item_ids ) as $id ) {
+			$hydrated = MenuCraft_Item_Repository::find( $id );
+			if ( $hydrated ) {
+				$out[ $id ] = $hydrated;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Render one offer to HTML. Used by the offers-list template; also
+	 * public so theme overrides can call it.
+	 *
+	 * @param array<string,mixed>            $offer    Hydrated offer.
+	 * @param array<int,array<string,mixed>> $items_map id => item lookup.
+	 * @param array<string,mixed>            $config   Normalised shortcode config.
+	 * @return string
+	 */
+	public static function render_offer( array $offer, array $items_map, array $config ) {
+		$template = self::locate_template( 'shortcode-offer' );
+		$config   = array_merge(
+			array(
+				'image_pos'  => 'left',
+				'show_items' => 'inline',
+				'show_desc'  => 'inline',
+				'show_dates' => true,
+				'conditions' => 'modal',
+			),
+			$config
+		);
+
+		ob_start();
+		/**
+		 * Action: fires before a single offer's HTML.
+		 *
+		 * @param array<string,mixed> $offer  Offer.
+		 * @param array<string,mixed> $config Normalised config.
+		 */
+		do_action( 'menucraft_before_offer', $offer, $config );
+
+		include $template;
+
+		/**
+		 * Action: fires after a single offer's HTML.
+		 *
+		 * @param array<string,mixed> $offer  Offer.
+		 * @param array<string,mixed> $config Normalised config.
+		 */
+		do_action( 'menucraft_after_offer', $offer, $config );
+
+		$html = (string) ob_get_clean();
+
+		/**
+		 * Filter: replace or wrap a single offer's HTML.
+		 *
+		 * @param string                         $html      Rendered HTML.
+		 * @param array<string,mixed>            $offer     Offer.
+		 * @param array<int,array<string,mixed>> $items_map id => item map.
+		 * @param array<string,mixed>            $config    Normalised config.
+		 */
+		return (string) apply_filters( 'menucraft_offers_shortcode_item_html', $html, $offer, $items_map, $config );
+	}
+
+	/**
+	 * Build the plain-text label of one offer-item line, e.g. "Pizza
+	 * (Small)" or "2× Cola". Reused by inline + modal renderers.
+	 *
+	 * @param array<string,mixed>            $line      offer_items row.
+	 * @param array<int,array<string,mixed>> $items_map id => item lookup.
+	 * @return string Escaped label ready to echo, or '' when the item is gone.
+	 */
+	public static function offer_line_label( array $line, array $items_map ) {
+		$item_id = (int) $line['item_id'];
+		if ( ! isset( $items_map[ $item_id ] ) ) {
+			return '';
+		}
+		$item = $items_map[ $item_id ];
+		$name = $item['name'];
+
+		$variant_label = '';
+		if ( ! empty( $line['variant_id'] ) ) {
+			foreach ( (array) $item['variants'] as $v ) {
+				if ( (int) $v['id'] === (int) $line['variant_id'] ) {
+					$variant_label = $v['label'];
+					break;
+				}
+			}
+		}
+
+		$qty    = isset( $line['quantity'] ) ? max( 1, (int) $line['quantity'] ) : 1;
+		$prefix = ( $qty > 1 ) ? $qty . '× ' : '';
+		$suffix = ( '' !== $variant_label ) ? ' (' . $variant_label . ')' : '';
+
+		return esc_html( $prefix . $name . $suffix );
+	}
+
+	/**
+	 * Human-friendly rendering of an offer's validity window.
+	 *
+	 * @param array<string,mixed> $offer Offer.
+	 * @return string Empty when no dates are set.
+	 */
+	public static function format_offer_validity( array $offer ) {
+		$from  = ! empty( $offer['valid_from'] ) ? substr( (string) $offer['valid_from'], 0, 10 ) : '';
+		$until = ! empty( $offer['valid_until'] ) ? substr( (string) $offer['valid_until'], 0, 10 ) : '';
+		if ( '' === $from && '' === $until ) {
+			return '';
+		}
+		$fmt = get_option( 'date_format' ) ? get_option( 'date_format' ) : 'Y-m-d';
+		$from_h  = '' !== $from  ? mysql2date( $fmt, $from . ' 00:00:00' )  : '';
+		$until_h = '' !== $until ? mysql2date( $fmt, $until . ' 00:00:00' ) : '';
+
+		if ( '' !== $from_h && '' !== $until_h ) {
+			return sprintf(
+				/* translators: 1: from-date, 2: until-date */
+				__( 'Valid %1$s – %2$s', 'menucraft' ),
+				$from_h,
+				$until_h
+			);
+		}
+		if ( '' !== $from_h ) {
+			return sprintf(
+				/* translators: %s: date */
+				__( 'Valid from %s', 'menucraft' ),
+				$from_h
+			);
+		}
+		return sprintf(
+			/* translators: %s: date */
+			__( 'Valid until %s', 'menucraft' ),
+			$until_h
+		);
 	}
 
 	/**

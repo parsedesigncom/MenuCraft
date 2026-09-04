@@ -129,6 +129,75 @@ defined( 'ABSPATH' ) || exit;
 					</div>
 				</details>
 
+				<?php // ---------- Offers shortcode ---------- ?>
+				<details class="menucraft-accordion-item">
+					<summary class="menucraft-accordion-summary">
+						<span class="menucraft-accordion-chevron" aria-hidden="true"></span>
+						<span class="menucraft-accordion-title"><?php esc_html_e( 'Offers shortcode', 'menucraft' ); ?></span>
+					</summary>
+					<div class="menucraft-accordion-body">
+
+						<h3><?php esc_html_e( 'What is the offers shortcode?', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'A second shortcode that shows your offers.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'It looks similar to the menu shortcode but has no filter buttons.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Add it to any page or post:', 'menucraft' ); ?></p>
+						<pre class="menucraft-help-code">[menucraft_offers]</pre>
+
+						<h3><?php esc_html_e( 'What is shown by default', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Only active offers.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'An offer shows if it is running now, or if it starts within the next 7 days.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Expired offers are hidden.', 'menucraft' ); ?></p>
+
+						<h3><?php esc_html_e( 'Change the look with attributes', 'menucraft' ); ?></h3>
+
+						<h4><code>image</code>, <code>columns</code>, <code>class</code></h4>
+						<p><?php esc_html_e( 'Same meaning as in the menu shortcode.', 'menucraft' ); ?></p>
+
+						<h4><code>validity</code></h4>
+						<p><?php esc_html_e( 'Possible values:', 'menucraft' ); ?> <code>preview</code>, <code>all</code></p>
+						<p><?php esc_html_e( 'Default:', 'menucraft' ); ?> <code>preview</code></p>
+						<p><code>preview</code> — <?php esc_html_e( 'active offers running now or starting within 7 days.', 'menucraft' ); ?></p>
+						<p><code>all</code> — <?php esc_html_e( 'every active offer, regardless of dates.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Example:', 'menucraft' ); ?></p>
+						<pre class="menucraft-help-code">[menucraft_offers validity="all"]</pre>
+
+						<h4><code>show_items</code></h4>
+						<p><?php esc_html_e( 'Where to show the list of included items.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Possible values:', 'menucraft' ); ?> <code>inline</code>, <code>modal</code>, <code>hide</code></p>
+						<p><?php esc_html_e( 'Default:', 'menucraft' ); ?> <code>inline</code></p>
+						<p><code>inline</code> — <?php esc_html_e( 'shown directly on the offer card.', 'menucraft' ); ?></p>
+						<p><code>modal</code> — <?php esc_html_e( 'shown only inside the details window.', 'menucraft' ); ?></p>
+						<p><code>hide</code> — <?php esc_html_e( 'not shown at all.', 'menucraft' ); ?></p>
+
+						<h4><code>show_desc</code></h4>
+						<p><?php esc_html_e( 'Where to show the offer description.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Possible values:', 'menucraft' ); ?> <code>inline</code>, <code>modal</code>, <code>hide</code></p>
+						<p><?php esc_html_e( 'Default:', 'menucraft' ); ?> <code>inline</code></p>
+						<p><?php esc_html_e( 'Set to', 'menucraft' ); ?> <code>modal</code> <?php esc_html_e( 'for a minimal card (image + title + price only) with everything else inside the details window.', 'menucraft' ); ?></p>
+
+						<h4><code>show_dates</code></h4>
+						<p><?php esc_html_e( 'Toggle the "Valid X – Y" line under each offer.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Possible values:', 'menucraft' ); ?> <code>show</code>, <code>hide</code></p>
+						<p><?php esc_html_e( 'Default:', 'menucraft' ); ?> <code>show</code></p>
+
+						<h4><code>conditions</code></h4>
+						<p><?php esc_html_e( 'Where to show the small conditions text (e.g. "from 20€ order value").', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'Possible values:', 'menucraft' ); ?> <code>modal</code>, <code>inline</code>, <code>hide</code></p>
+						<p><?php esc_html_e( 'Default:', 'menucraft' ); ?> <code>modal</code></p>
+
+						<h3><?php esc_html_e( 'When is the card clickable?', 'menucraft' ); ?></h3>
+						<p><?php esc_html_e( 'Only when the modal actually has something to show.', 'menucraft' ); ?></p>
+						<p><?php esc_html_e( 'That is the case if any of these applies:', 'menucraft' ); ?></p>
+						<ul>
+							<li><?php esc_html_e( 'conditions set to modal AND the offer has a conditions text', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'show_items set to modal AND the offer has items', 'menucraft' ); ?></li>
+							<li><?php esc_html_e( 'show_desc set to modal AND the offer has a description', 'menucraft' ); ?></li>
+						</ul>
+						<p><?php esc_html_e( 'Otherwise the card is static and shows everything it has directly.', 'menucraft' ); ?></p>
+
+					</div>
+				</details>
+
 				<?php // ---------- Gutenberg block ---------- ?>
 				<details class="menucraft-accordion-item">
 					<summary class="menucraft-accordion-summary">

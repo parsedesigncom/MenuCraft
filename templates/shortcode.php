@@ -31,7 +31,8 @@ $items_override   = apply_filters( 'menucraft_shortcode_items_html', '', $items 
 ?>
 <div class="menucraft menucraft-menu<?php echo esc_attr( $grid_class ); ?> menucraft-image-<?php echo esc_attr( $image_pos ); ?><?php echo esc_attr( $custom_class ); ?>"
 	id="<?php echo esc_attr( $instance_id ); ?>"
-	data-menucraft-menu>
+	data-menucraft-menu
+	data-menucraft-root>
 
 	<?php if ( ! empty( $config['grid_css'] ) ) : ?>
 		<style><?php echo $config['grid_css']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></style>

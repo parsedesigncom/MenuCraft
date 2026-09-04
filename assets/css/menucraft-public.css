@@ -137,12 +137,15 @@
 	height: 100%;
 }
 
-.menucraft-item.menucraft-item-has-details {
+.menucraft-item.menucraft-item-has-details,
+.menucraft-item.menucraft-offer-has-details {
 	cursor: pointer;
 }
 
 .menucraft-item.menucraft-item-has-details:hover,
-.menucraft-item.menucraft-item-has-details:focus-visible {
+.menucraft-item.menucraft-item-has-details:focus-visible,
+.menucraft-item.menucraft-offer-has-details:hover,
+.menucraft-item.menucraft-offer-has-details:focus-visible {
 	border-color: rgba( 0, 0, 0, 0.2 );
 	box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.06 );
 	outline: none;
@@ -434,6 +437,72 @@
 
 .menucraft-content-align-center .menucraft-item-head { justify-content: center; }
 .menucraft-content-align-right  .menucraft-item-head { justify-content: flex-end; }
+
+/* ============================================================= Offers */
+
+.menucraft-offers-list {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.menucraft-offers--grid .menucraft-offers-list {
+	display: grid;
+	gap: 16px;
+}
+
+.menucraft-offers--grid .menucraft-item {
+	height: 100%;
+}
+
+/* Composition list inside an offer card ("2× Pizza (Small)") */
+.menucraft-offer-lines {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	list-style: disc;
+	margin: 6px 0 0 18px;
+	padding: 0;
+}
+
+.menucraft-offer-line {
+	font-size: 0.95em;
+}
+
+.menucraft-offer-validity {
+	color: rgba( 0, 0, 0, 0.55 );
+	font-size: 0.8em;
+	margin-top: 6px;
+}
+
+.menucraft-offer-conditions {
+	color: rgba( 0, 0, 0, 0.55 );
+	font-size: 0.8em;
+	font-style: italic;
+	margin: 6px 0 0;
+}
+
+/* Same conditions/composition styling when they appear inside the modal */
+.menucraft-modal-offer-lines {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	list-style: disc;
+	margin: 0 0 12px 20px;
+	padding: 0;
+}
+
+.menucraft-modal-offer-conditions {
+	color: rgba( 0, 0, 0, 0.6 );
+	font-size: 0.9em;
+	font-style: italic;
+	margin: 8px 0 0;
+}
+
+.menucraft-modal-offer-desc {
+	line-height: 1.55;
+	margin: 0 0 0.75em;
+}
 
 body.menucraft-modal-lock {
 	overflow: hidden;

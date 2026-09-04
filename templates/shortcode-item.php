@@ -162,6 +162,7 @@ if ( $image_url ) {
 	<?php if ( $has_details ) : ?>
 		tabindex="0"
 		role="button"
+		data-menucraft-open-details="item-<?php echo esc_attr( (string) $item_id ); ?>"
 		aria-label="<?php echo esc_attr( sprintf( /* translators: %s: item name */ __( 'Show details for %s', 'menucraft' ), $item['name'] ) ); ?>"
 	<?php endif; ?>>
 
@@ -177,7 +178,7 @@ if ( $image_url ) {
 	?>
 
 	<?php if ( $has_details ) : ?>
-		<script type="application/json" data-menucraft-item-details="<?php echo esc_attr( (string) $item_id ); ?>">
+		<script type="application/json" data-menucraft-details="item-<?php echo esc_attr( (string) $item_id ); ?>">
 			<?php echo wp_json_encode( array( 'title' => $item['name'], 'html' => $modal_html ) ); ?>
 		</script>
 	<?php endif; ?>

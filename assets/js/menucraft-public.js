@@ -11,12 +11,14 @@
 ( function () {
 	'use strict';
 
-	var ROOT_SEL   = '[data-menucraft-menu]';
-	var ITEM_SEL   = '[data-menucraft-item]';
-	var CHIP_SEL   = '[data-menucraft-filter]';
-	var MODAL_SEL  = '[data-menucraft-modal]';
-	var MODAL_OPEN = 'is-open';
-	var BODY_LOCK  = 'menucraft-modal-lock';
+	var ROOT_SEL     = '[data-menucraft-root]';
+	var ITEM_SEL     = '[data-menucraft-item]';
+	var CHIP_SEL     = '[data-menucraft-filter]';
+	var MODAL_SEL    = '[data-menucraft-modal]';
+	var OPENER_SEL   = '[data-menucraft-open-details]';
+	var PAYLOAD_ATTR = 'data-menucraft-details';
+	var MODAL_OPEN   = 'is-open';
+	var BODY_LOCK    = 'menucraft-modal-lock';
 
 	var lastFocus = null;
 
@@ -27,7 +29,7 @@
 
 	function initRoot( root ) {
 		wireFilters( root );
-		wireItemDetails( root );
+		wireDetails( root );
 	}
 
 	// ============================================================ Filters ==
@@ -88,20 +90,23 @@
 
 	// ============================================================== Modal ==
 
-	function wireItemDetails( root ) {
+	function wireDetails( root ) {
 		var modal = root.querySelector( MODAL_SEL );
 
-		var items = root.querySelectorAll( '.menucraft-item-has-details' );
-		Array.prototype.forEach.call( items, function ( item ) {
-			item.addEventListener( 'click', function ( e ) {
+		// Any element with data-menucraft-open-details is a clickable
+		// details opener — works for both items ([menucraft]) and
+		// offers ([menucraft_offers]) with the same wiring.
+		var openers = root.querySelectorAll( OPENER_SEL );
+		Array.prototype.forEach.call( openers, function ( opener ) {
+			opener.addEventListener( 'click', function ( e ) {
 				// Don't intercept clicks on native interactive children.
 				if ( e.target.closest( 'a, button, input, select, textarea' ) ) return;
-				openDetailsFor( item, modal );
+				openDetailsFor( opener, modal );
 			} );
-			item.addEventListener( 'keydown', function ( e ) {
+			opener.addEventListener( 'keydown', function ( e ) {
 				if ( e.key === 'Enter' || e.key === ' ' ) {
 					e.preventDefault();
-					openDetailsFor( item, modal );
+					openDetailsFor( opener, modal );
 				}
 			} );
 		} );
@@ -120,10 +125,10 @@
 		} );
 	}
 
-	function openDetailsFor( item, modal ) {
+	function openDetailsFor( opener, modal ) {
 		if ( ! modal ) return;
-		var id      = item.getAttribute( 'data-menucraft-item' );
-		var payload = item.querySelector( '[data-menucraft-item-details="' + id + '"]' );
+		var id      = opener.getAttribute( 'data-menucraft-open-details' );
+		var payload = opener.querySelector( '[' + PAYLOAD_ATTR + '="' + id + '"]' );
 		if ( ! payload ) return;
 
 		var data;
